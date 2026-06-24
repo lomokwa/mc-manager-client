@@ -1,121 +1,154 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 
+const API_BASE = 'http://localhost:8080/api'
+const WS_URL = 'ws://localhost:8080/api/console'
+const API_KEY = import.meta.env.VITE_API_KEY ?? ''
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [running, setRunning] = useState(false)
+  const [logs, setLogs] = useState<string[]>([])
+  const [command, setCommand] = useState('')
+  const [loading, setLoading] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
+  const logsEndRef = useRef<HTMLDivElement>(null)
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'X-API-Key': API_KEY,
+  }
+
+  useEffect(() => {
+    fetch(`${API_BASE}/status`, {
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setRunning(data.data.running)
+      })
+      .catch(() => {})
+  }, [])
+
+  const connectWs = useCallback(() => {
+    if (wsRef.current) return
+    const ws = new WebSocket(`${WS_URL}?key=${encodeURIComponent(API_KEY)}`)
+    ws.onopen = () => {
+      wsRef.current = ws
+    }
+    ws.onmessage = (e) => {
+      setLogs((prev) => [...prev, e.data])
+    }
+    ws.onclose = () => {
+      wsRef.current = null
+    }
+    ws.onerror = () => {
+      wsRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (running) connectWs()
+    return () => {
+      wsRef.current?.close()
+      wsRef.current = null
+    }
+  }, [running, connectWs])
+
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [logs])
+
+  const handleStart = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/start`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          createLaunchScript: true,
+          configureProperties: false,
+          properties: {},
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRunning(true)
+      } else {
+        setLogs((prev) => [...prev, `[ERROR] ${data.error}`])
+      }
+    } catch {
+      setLogs((prev) => [...prev, `[ERROR] Failed to start server`])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStop = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/stop`, {
+        method: 'POST',
+        headers,
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRunning(false)
+      } else {
+        setLogs((prev) => [...prev, `[ERROR] ${data.error}`])
+      }
+    } catch {
+      setLogs((prev) => [...prev, `[ERROR] Failed to stop server`])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSendCommand = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!command.trim() || !wsRef.current) return
+    wsRef.current.send(command)
+    setLogs((prev) => [...prev, `> ${command}`])
+    setCommand('')
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <header className="header">
+        <h1>MC Manager</h1>
+        <div className="controls">
+          <span className={`status-dot ${running ? 'online' : 'offline'}`} />
+          <span className="status-text">{running ? 'Running' : 'Stopped'}</span>
+          {running ? (
+            <button onClick={handleStop} disabled={loading} className="btn btn-stop">
+              Stop Server
+            </button>
+          ) : (
+            <button onClick={handleStart} disabled={loading} className="btn btn-start">
+              Start Server
+            </button>
+          )}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <main className="terminal">
+        <div className="terminal-output">
+          {logs.map((line, i) => (
+            <div key={i} className="log-line">{line}</div>
+          ))}
+          <div ref={logsEndRef} />
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <form className="terminal-input" onSubmit={handleSendCommand}>
+          <span className="prompt">&gt;</span>
+          <input
+            type="text"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder={running ? 'Type a command...' : 'Server is not running'}
+            disabled={!running}
+          />
+        </form>
+      </main>
+    </div>
   )
 }
 
