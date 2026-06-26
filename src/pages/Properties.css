@@ -67,6 +67,12 @@
   opacity: 0.9;
 }
 
+.props-loading {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #a0a0b0;
+}
+
 .btn-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
