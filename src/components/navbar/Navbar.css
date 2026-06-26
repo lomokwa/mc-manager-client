@@ -1,1 +1,10 @@
 /* Navbar styles - moved from App.css header styles */
+
+.server-error {
+  color: #e94560;
+  font-size: 0.8rem;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
