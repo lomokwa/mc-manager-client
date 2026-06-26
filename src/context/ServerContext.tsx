@@ -1,8 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
-const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
 const API_KEY = import.meta.env.VITE_API_KEY ?? ''
+
+// Resolve the console WebSocket URL. An explicit relative path (e.g.
+// "/api/console") is resolved against the current origin, so a Vite dev proxy
+// — or a same-origin deployment behind a reverse proxy — works without
+// hardcoding host/port. An absolute ws(s):// value is used as-is.
+function resolveWsUrl(): string {
+  const configured = import.meta.env.VITE_WS_URL as string | undefined
+  if (configured && configured.startsWith('/')) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${proto}//${window.location.host}${configured}`
+  }
+  return configured ?? 'ws://localhost:8080/api/console'
+}
+
+const WS_URL = resolveWsUrl()
 
 type MessageListener = (data: string) => void
 
