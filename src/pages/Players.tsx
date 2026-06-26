@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useServer } from '../context/ServerContext'
-import type { Player, APIResponse } from '../types/player'
+import type { Player } from '../types/player'
+import { apiFetch } from '../lib/api'
 import './Players.css'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
-const API_KEY = import.meta.env.VITE_API_KEY ?? ''
 
 const JOIN_LEAVE_PATTERN = /joined the game|left the game/
 
@@ -19,21 +17,14 @@ function Players() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/players`, {
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'ngrok-skip-browser-warning': 'true' },
+      const data = await apiFetch<Player[]>('/players')
+      const sorted = [...data].sort((a, b) => {
+        if (a.online !== b.online) return a.online ? -1 : 1
+        return a.name.localeCompare(b.name)
       })
-      const data: APIResponse<Player[]> = await res.json()
-      if (data.success && data.data) {
-        const sorted = [...data.data].sort((a, b) => {
-          if (a.online !== b.online) return a.online ? -1 : 1
-          return a.name.localeCompare(b.name)
-        })
-        setPlayers(sorted)
-      } else {
-        setError(data.error ?? 'Failed to fetch players')
-      }
-    } catch {
-      setError('Could not connect to server')
+      setPlayers(sorted)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not connect to server')
     } finally {
       setLoading(false)
     }
