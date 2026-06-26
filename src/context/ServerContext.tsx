@@ -9,6 +9,7 @@ type MessageListener = (data: string) => void
 interface ServerContextType {
   running: boolean
   loading: boolean
+  error: string | null
   logs: string[]
   appendLog: (line: string) => void
   handleStart: () => Promise<void>
@@ -24,6 +25,7 @@ const MAX_LOG_LINES = 1000
 export function ServerProvider({ children }: { children: ReactNode }) {
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [logs, setLogs] = useState<string[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Set<MessageListener>>(new Set())
@@ -98,6 +100,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const handleStart = async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`${API_BASE}/start`, {
         method: 'POST',
@@ -111,9 +114,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(true)
+      } else {
+        setError(data.error ?? 'Failed to start the server')
       }
     } catch {
-      // handled by consumers
+      setError('Could not reach the server')
     } finally {
       setLoading(false)
     }
@@ -121,6 +126,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const handleStop = async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`${API_BASE}/stop`, {
         method: 'POST',
@@ -129,16 +135,18 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(false)
+      } else {
+        setError(data.error ?? 'Failed to stop the server')
       }
     } catch {
-      // handled by consumers
+      setError('Could not reach the server')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, logs, appendLog, handleStart, handleStop, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, error, logs, appendLog, handleStart, handleStop, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )
