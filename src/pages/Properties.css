@@ -66,3 +66,21 @@
 .btn-save:hover {
   opacity: 0.9;
 }
+
+@media (max-width: 768px) {
+  .properties-page {
+    padding: 1rem;
+  }
+
+  .properties-form {
+    grid-template-columns: 1fr;
+  }
+
+  .property-field {
+    flex-wrap: wrap;
+  }
+
+  .btn-save {
+    grid-column: 1;
+  }
+}

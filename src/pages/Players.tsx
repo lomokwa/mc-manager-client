@@ -3,18 +3,16 @@ import { useServer } from '../context/ServerContext'
 import type { Player, APIResponse } from '../types/player'
 import './Players.css'
 
-const API_BASE = 'http://localhost:8080/api'
-const WS_URL = 'ws://localhost:8080/api/console'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 const API_KEY = import.meta.env.VITE_API_KEY ?? ''
 
 const JOIN_LEAVE_PATTERN = /joined the game|left the game/
 
 function Players() {
-  const { running } = useServer()
+  const { running, subscribe } = useServer()
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const wsRef = useRef<WebSocket | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchPlayers = useCallback(async () => {
@@ -22,7 +20,7 @@ function Players() {
     setError(null)
     try {
       const res = await fetch(`${API_BASE}/players`, {
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'ngrok-skip-browser-warning': 'true' },
       })
       const data: APIResponse<Player[]> = await res.json()
       if (data.success && data.data) {
@@ -46,41 +44,29 @@ function Players() {
     fetchPlayers()
   }, [fetchPlayers])
 
-  // WebSocket listener for join/leave events
+  // Subscribe to shared WebSocket for join/leave events
   useEffect(() => {
     if (!running) return
 
-    const ws = new WebSocket(`${WS_URL}?key=${encodeURIComponent(API_KEY)}`)
-    ws.onmessage = (e) => {
-      if (JOIN_LEAVE_PATTERN.test(e.data)) {
-        // Debounce to avoid rapid re-fetches if multiple players join/leave at once
+    const unsubscribe = subscribe((data) => {
+      if (JOIN_LEAVE_PATTERN.test(data)) {
         if (debounceRef.current) clearTimeout(debounceRef.current)
         debounceRef.current = setTimeout(() => {
           fetchPlayers()
         }, 500)
       }
-    }
-    ws.onopen = () => {
-      wsRef.current = ws
-    }
-    ws.onclose = () => {
-      wsRef.current = null
-    }
+    })
 
     return () => {
-      ws.close()
-      wsRef.current = null
+      unsubscribe()
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [running, fetchPlayers])
+  }, [running, subscribe, fetchPlayers])
 
   return (
     <div className="players-page">
       <div className="players-header">
         <h2>Players</h2>
-        <button className="btn btn-refresh" onClick={fetchPlayers} disabled={loading}>
-          Refresh
-        </button>
       </div>
 
       {loading && <p className="players-loading">Loading players...</p>}

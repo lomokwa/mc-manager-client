@@ -8,4 +8,7 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    allowedHosts: ["calm-octopus-heavily.ngrok-free.app"]
+  }
 })

@@ -26,6 +26,7 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   text-align: left;
+  text-decoration: none;
 }
 
 .sidebar-item:hover {
@@ -46,4 +47,36 @@
 
 .sidebar-label {
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    order: 1;
+    padding: 0;
+    border-right: none;
+    border-top: 1px solid #0f3460;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .sidebar-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    align-items: center;
+  }
+
+  .sidebar-item.active {
+    border-left: none;
+    border-top: 2px solid #4ecca3;
+    padding-left: 12px;
+    padding-top: 6px;
+  }
 }
