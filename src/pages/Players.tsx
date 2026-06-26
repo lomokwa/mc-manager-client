@@ -1,29 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Search,
-  RefreshCw,
-  ShieldCheck,
-  ShieldOff,
-  LogOut,
-  Ban,
-  CircleCheck,
-  UserPlus,
-  UserMinus,
-} from 'lucide-react'
+import { Search, RefreshCw, ChevronRight } from 'lucide-react'
 import { useServer } from '../context/ServerContext'
 import type { Player } from '../types/player'
 import { apiFetch } from '../lib/api'
-import { useToast } from '../components/toast/ToastContext'
-import { playerActionCommand, ACTION_LABELS, DESTRUCTIVE_ACTIONS, type PlayerAction } from '../lib/playerCommands'
+import { PlayerPanel } from '../components/player/PlayerPanel'
 import './Players.css'
 
 const JOIN_LEAVE_PATTERN = /joined the game|left the game/
 
 function Players() {
-  const { running, subscribe, sendCommand } = useServer()
-  const { toast } = useToast()
+  const { running, subscribe } = useServer()
   const [players, setPlayers] = useState<Player[]>([])
   const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<Player | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,23 +60,15 @@ function Players() {
     }
   }, [running, subscribe, fetchPlayers])
 
-  const runAction = (action: PlayerAction, player: Player) => {
-    if (!running) return
-    const command = playerActionCommand(action, player.name)
-    if (!command) {
-      toast(`"${player.name}" isn't a valid username`, 'error')
-      return
-    }
-    if (DESTRUCTIVE_ACTIONS.has(action) && !window.confirm(`${action === 'ban' ? 'Ban' : 'Kick'} ${player.name}?`)) {
-      return
-    }
-    sendCommand(command)
-    toast(`${ACTION_LABELS[action]} ${player.name}`, action === 'ban' ? 'error' : 'success')
-    // Give the server a moment to update ops/ban/whitelist files, then refresh.
-    setTimeout(() => fetchPlayers(true), 800)
-  }
+  // Keep the open panel's data fresh as the roster refreshes.
+  useEffect(() => {
+    if (!selected) return
+    const latest = players.find((p) => p.uuid === selected.uuid)
+    if (latest && latest !== selected) setSelected(latest)
+  }, [players, selected])
 
   const onlineCount = useMemo(() => players.filter((p) => p.online).length, [players])
+  const onlinePlayers = useMemo(() => players.filter((p) => p.online), [players])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players
@@ -122,7 +103,7 @@ function Players() {
       </div>
 
       {!running && !loading && !error && (
-        <p className="players-hint">Server is stopped — start it to op, kick, ban or whitelist players.</p>
+        <p className="players-hint">Server is stopped — start it to manage players.</p>
       )}
 
       {loading && <p className="players-loading">Loading players...</p>}
@@ -139,7 +120,13 @@ function Players() {
       {!loading && !error && filtered.length > 0 && (
         <div className="players-list">
           {filtered.map((player) => (
-            <div key={player.uuid} className={`player-card ${player.online ? 'online' : 'offline'}`}>
+            <button
+              key={player.uuid}
+              type="button"
+              className={`player-card ${player.online ? 'online' : 'offline'}`}
+              onClick={() => setSelected(player)}
+              aria-label={`Manage ${player.name}`}
+            >
               <div className="player-status-indicator" title={player.online ? 'Online' : 'Offline'} />
               <img
                 className="player-avatar"
@@ -154,58 +141,19 @@ function Players() {
                   {player.is_whitelisted && <span className="badge badge-whitelisted">Whitelisted</span>}
                 </div>
               </div>
-
-              <div className="player-actions" aria-label={`Actions for ${player.name}`}>
-                <button
-                  type="button"
-                  className="player-action"
-                  disabled={!running}
-                  title={running ? (player.is_op ? 'Remove operator' : 'Make operator') : 'Start the server to manage players'}
-                  aria-label={player.is_op ? `Remove operator from ${player.name}` : `Make ${player.name} an operator`}
-                  onClick={() => runAction(player.is_op ? 'deop' : 'op', player)}
-                >
-                  {player.is_op ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
-                </button>
-
-                {player.online && (
-                  <button
-                    type="button"
-                    className="player-action"
-                    disabled={!running}
-                    title={running ? 'Kick' : 'Start the server to manage players'}
-                    aria-label={`Kick ${player.name}`}
-                    onClick={() => runAction('kick', player)}
-                  >
-                    <LogOut size={16} />
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  className={`player-action ${player.is_banned ? '' : 'danger'}`}
-                  disabled={!running}
-                  title={running ? (player.is_banned ? 'Unban' : 'Ban') : 'Start the server to manage players'}
-                  aria-label={player.is_banned ? `Unban ${player.name}` : `Ban ${player.name}`}
-                  onClick={() => runAction(player.is_banned ? 'pardon' : 'ban', player)}
-                >
-                  {player.is_banned ? <CircleCheck size={16} /> : <Ban size={16} />}
-                </button>
-
-                <button
-                  type="button"
-                  className="player-action"
-                  disabled={!running}
-                  title={running ? (player.is_whitelisted ? 'Remove from whitelist' : 'Add to whitelist') : 'Start the server to manage players'}
-                  aria-label={player.is_whitelisted ? `Remove ${player.name} from the whitelist` : `Add ${player.name} to the whitelist`}
-                  onClick={() => runAction(player.is_whitelisted ? 'whitelist-remove' : 'whitelist-add', player)}
-                >
-                  {player.is_whitelisted ? <UserMinus size={16} /> : <UserPlus size={16} />}
-                </button>
-              </div>
-            </div>
+              <ChevronRight size={18} className="player-chevron" />
+            </button>
           ))}
         </div>
       )}
+
+      <PlayerPanel
+        player={selected}
+        onlinePlayers={onlinePlayers}
+        worldSpawn={null}
+        onClose={() => setSelected(null)}
+        onRefresh={() => fetchPlayers(true)}
+      />
     </div>
   )
 }
