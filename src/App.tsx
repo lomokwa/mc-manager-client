@@ -3,6 +3,8 @@ import './App.css'
 import Sidebar from './components/sidebar/Sidebar'
 import Navbar from './components/navbar/Navbar'
 import Console from './pages/Console'
+import Players from './pages/Players'
+import Properties from './pages/Properties'
 import { ServerProvider } from './context/ServerContext'
 
 function App() {
@@ -15,6 +17,8 @@ function App() {
             <Navbar />
             <Routes>
               <Route path="/" element={<Console />} />
+              <Route path="/players" element={<Players />} />
+              <Route path="/properties" element={<Properties />} />
             </Routes>
           </div>
         </div>

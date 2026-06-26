@@ -1,31 +1,28 @@
+import { NavLink } from 'react-router-dom'
 import { Terminal, Users, FolderOpen, Settings, type LucideIcon } from 'lucide-react'
 import './Sidebar.css'
 
-interface SidebarProps {
-  active?: string
-  onNavigate?: (page: string) => void
-}
-
-const navItems: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'console', label: 'Console', icon: Terminal },
-  { id: 'players', label: 'Players', icon: Users },
-  { id: 'files', label: 'Files', icon: FolderOpen },
-  { id: 'settings', label: 'Settings', icon: Settings },
+const navItems: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: '/', label: 'Console', icon: Terminal },
+  { to: '/players', label: 'Players', icon: Users },
+  { to: '/files', label: 'Files', icon: FolderOpen },
+  { to: '/properties', label: 'Properties', icon: Settings },
 ]
 
-function Sidebar({ active = 'console', onNavigate }: SidebarProps) {
+function Sidebar() {
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
         {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={`sidebar-item ${active === item.id ? 'active' : ''}`}
-            onClick={() => onNavigate?.(item.id)}
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+            end={item.to === '/'}
           >
             <item.icon className="sidebar-icon" size={18} />
             <span className="sidebar-label">{item.label}</span>
-          </button>
+          </NavLink>
         ))}
       </nav>
     </aside>
