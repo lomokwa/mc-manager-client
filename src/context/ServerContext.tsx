@@ -53,19 +53,19 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const connectWs = useCallback(() => {
     if (wsRef.current) return
     const ws = new WebSocket(`${WS_URL}?key=${encodeURIComponent(API_KEY)}`)
-    ws.onopen = () => {
-      wsRef.current = ws
-    }
+    // Track the socket immediately (not in onopen) so the effect cleanup can
+    // close it even while it is still CONNECTING, and so the guard above
+    // prevents a second, duplicate connection from being opened.
+    wsRef.current = ws
     ws.onmessage = (e) => {
       appendLog(e.data)
       listenersRef.current.forEach((fn) => fn(e.data))
     }
     ws.onclose = () => {
-      wsRef.current = null
+      // Only clear the ref if it still points at this socket — a newer
+      // connection may already have replaced it.
+      if (wsRef.current === ws) wsRef.current = null
       refreshStatus()
-    }
-    ws.onerror = () => {
-      wsRef.current = null
     }
   }, [])
 
@@ -84,7 +84,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, [running, connectWs])
 
   const sendCommand = useCallback((cmd: string) => {
-    wsRef.current?.send(cmd)
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(cmd)
   }, [])
 
   const subscribe = useCallback((listener: MessageListener) => {
