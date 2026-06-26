@@ -8,24 +8,27 @@ import Properties from './pages/Properties'
 import Files from './pages/Files'
 import NotFound from './pages/NotFound'
 import { ServerProvider } from './context/ServerContext'
+import { ToastProvider } from './components/toast/ToastContext'
 
 function App() {
   return (
     <BrowserRouter>
       <ServerProvider>
-        <div className="app">
-          <Sidebar />
-          <div className="main-content">
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Console />} />
-              <Route path="/players" element={<Players />} />
-              <Route path="/files" element={<Files />} />
-              <Route path="/properties" element={<Properties />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+        <ToastProvider>
+          <div className="app">
+            <Sidebar />
+            <div className="main-content">
+              <Navbar />
+              <Routes>
+                <Route path="/" element={<Console />} />
+                <Route path="/players" element={<Players />} />
+                <Route path="/files" element={<Files />} />
+                <Route path="/properties" element={<Properties />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
           </div>
-        </div>
+        </ToastProvider>
       </ServerProvider>
     </BrowserRouter>
   )
