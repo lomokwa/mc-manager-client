@@ -5,6 +5,8 @@ import Navbar from './components/navbar/Navbar'
 import Console from './pages/Console'
 import Players from './pages/Players'
 import Properties from './pages/Properties'
+import Files from './pages/Files'
+import NotFound from './pages/NotFound'
 import { ServerProvider } from './context/ServerContext'
 
 function App() {
@@ -18,7 +20,9 @@ function App() {
             <Routes>
               <Route path="/" element={<Console />} />
               <Route path="/players" element={<Players />} />
+              <Route path="/files" element={<Files />} />
               <Route path="/properties" element={<Properties />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </div>

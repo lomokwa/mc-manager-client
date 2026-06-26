@@ -177,3 +177,34 @@
     padding: 8px 12px;
   }
 }
+
+.placeholder-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.placeholder-page h2 {
+  margin: 0;
+  color: #4ecca3;
+}
+
+.placeholder-page p {
+  margin: 0;
+  color: #a0a0b0;
+}
+
+.placeholder-link {
+  margin-top: 8px;
+  color: #4ecca3;
+  text-decoration: none;
+}
+
+.placeholder-link:hover {
+  text-decoration: underline;
+}
