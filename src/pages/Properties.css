@@ -67,6 +67,26 @@
   opacity: 0.9;
 }
 
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-msg {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.save-success {
+  color: #4ecca3;
+}
+
+.save-error {
+  color: #e94560;
+}
+
 @media (max-width: 768px) {
   .properties-page {
     padding: 1rem;
