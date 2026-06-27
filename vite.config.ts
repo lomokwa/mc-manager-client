@@ -23,6 +23,13 @@ export default defineConfig(({ mode }) => {
               changeOrigin: true,
               secure: true,
               ws: true,
+              // Present every proxied request to the upstream as same-origin so
+              // the server's CORS and WebSocket origin checks accept the dev
+              // proxy (otherwise the live console socket gets rejected).
+              configure: (proxy) => {
+                proxy.on('proxyReq', (proxyReq) => proxyReq.setHeader('origin', proxyTarget))
+                proxy.on('proxyReqWs', (proxyReq) => proxyReq.setHeader('origin', proxyTarget))
+              },
             },
           }
         : undefined,
