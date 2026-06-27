@@ -1,48 +1,50 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useServer } from '../context/ServerContext'
+import { useAuth } from '../context/AuthContext'
 import type { Player, APIResponse } from '../types/player'
 import './Players.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
-const API_KEY = import.meta.env.VITE_API_KEY ?? ''
 
 const JOIN_LEAVE_PATTERN = /joined the game|left the game/
 
 function Players() {
   const { running, subscribe } = useServer()
+  const { token } = useAuth()
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [fetchTrigger, setFetchTrigger] = useState(0)
 
-  const fetchPlayers = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`${API_BASE}/players`, {
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'ngrok-skip-browser-warning': 'true' },
-      })
-      const data: APIResponse<Player[]> = await res.json()
-      if (data.success && data.data) {
-        const sorted = [...data.data].sort((a, b) => {
-          if (a.online !== b.online) return a.online ? -1 : 1
-          return a.name.localeCompare(b.name)
-        })
-        setPlayers(sorted)
-      } else {
-        setError(data.error ?? 'Failed to fetch players')
-      }
-    } catch {
-      setError('Could not connect to server')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Initial fetch
+  // Fetch players when fetchTrigger changes
   useEffect(() => {
-    fetchPlayers()
-  }, [fetchPlayers])
+    let cancelled = false
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
+
+    fetch(`${API_BASE}/players`, { headers })
+      .then((res) => res.json())
+      .then((data: APIResponse<Player[]>) => {
+        if (cancelled) return
+        if (data.success && data.data) {
+          const sorted = [...data.data].sort((a, b) => {
+            if (a.online !== b.online) return a.online ? -1 : 1
+            return a.name.localeCompare(b.name)
+          })
+          setPlayers(sorted)
+        } else {
+          setError(data.error ?? 'Failed to fetch players')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not connect to server')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [token, fetchTrigger])
 
   // Subscribe to shared WebSocket for join/leave events
   useEffect(() => {
@@ -52,7 +54,7 @@ function Players() {
       if (JOIN_LEAVE_PATTERN.test(data)) {
         if (debounceRef.current) clearTimeout(debounceRef.current)
         debounceRef.current = setTimeout(() => {
-          fetchPlayers()
+          setFetchTrigger((n) => n + 1)
         }, 500)
       }
     })
@@ -61,7 +63,7 @@ function Players() {
       unsubscribe()
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [running, subscribe, fetchPlayers])
+  }, [running, subscribe])
 
   return (
     <div className="players-page">
