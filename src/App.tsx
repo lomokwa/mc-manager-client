@@ -10,26 +10,29 @@ import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import { ServerProvider } from './context/ServerContext'
 import { ToastProvider } from './components/toast/ToastContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
   return (
     <BrowserRouter>
       <ServerProvider>
         <ToastProvider>
-          <div className="app">
-            <Sidebar />
-            <div className="main-content">
-              <Navbar />
-              <Routes>
-                <Route path="/" element={<Console />} />
-                <Route path="/players" element={<Players />} />
-                <Route path="/files" element={<Files />} />
-                <Route path="/properties" element={<Properties />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+          <ErrorBoundary>
+            <div className="app">
+              <Sidebar />
+              <div className="main-content">
+                <Navbar />
+                <Routes>
+                  <Route path="/" element={<Console />} />
+                  <Route path="/players" element={<Players />} />
+                  <Route path="/files" element={<Files />} />
+                  <Route path="/properties" element={<Properties />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
             </div>
-          </div>
+          </ErrorBoundary>
         </ToastProvider>
       </ServerProvider>
     </BrowserRouter>

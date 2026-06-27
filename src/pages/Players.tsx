@@ -12,7 +12,7 @@ function Players() {
   const { running, subscribe } = useServer()
   const [players, setPlayers] = useState<Player[]>([])
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<Player | null>(null)
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null)
   const [worldSpawn, setWorldSpawn] = useState<{ x: number; y: number; z: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +42,7 @@ function Players() {
 
   // Initial fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch on mount
     fetchPlayers()
   }, [fetchPlayers])
 
@@ -78,19 +79,17 @@ function Players() {
     }
   }, [running, subscribe, fetchPlayers])
 
-  // Keep the open panel's data fresh as the roster refreshes.
-  useEffect(() => {
-    if (!selected) return
-    const latest = players.find((p) => p.uuid === selected.uuid)
-    if (latest && latest !== selected) setSelected(latest)
-  }, [players, selected])
-
   const onlineCount = useMemo(() => players.filter((p) => p.online).length, [players])
   const onlinePlayers = useMemo(() => players.filter((p) => p.online), [players])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players
   }, [players, query])
+
+  // Derive the selected player from the live roster so the open panel always
+  // reflects the latest data (no syncing effect needed). It resolves to null if
+  // the player drops off the roster, which closes the panel.
+  const selected = selectedUuid ? (players.find((p) => p.uuid === selectedUuid) ?? null) : null
 
   return (
     <div className="players-page">
@@ -142,7 +141,7 @@ function Players() {
               key={player.uuid}
               type="button"
               className={`player-card ${player.online ? 'online' : 'offline'}`}
-              onClick={() => setSelected(player)}
+              onClick={() => setSelectedUuid(player.uuid)}
               aria-label={`Manage ${player.name}`}
             >
               <div className="player-status-indicator" title={player.online ? 'Online' : 'Offline'} />
@@ -166,10 +165,11 @@ function Players() {
       )}
 
       <PlayerPanel
+        key={selectedUuid ?? 'none'}
         player={selected}
         onlinePlayers={onlinePlayers}
         worldSpawn={worldSpawn}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedUuid(null)}
         onRefresh={() => fetchPlayers(true)}
       />
     </div>

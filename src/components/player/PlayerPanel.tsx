@@ -86,16 +86,6 @@ export function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefr
     return () => window.removeEventListener('keydown', onKey)
   }, [player, onClose])
 
-  // Reset the form when switching to a different player.
-  useEffect(() => {
-    setReason('')
-    setTpTarget('')
-    setCoords({ x: '', y: '', z: '' })
-    setRunCmd('')
-    setDm('')
-    setDmColor('white')
-  }, [player?.uuid])
-
   if (!player) return null
   const p = player
 
