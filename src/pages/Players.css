@@ -2,6 +2,7 @@
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
+  animation: page-enter 0.4s var(--ease) both;
 }
 
 .players-header {
@@ -149,12 +150,14 @@
   font: inherit;
   color: inherit;
   cursor: pointer;
-  transition: opacity 0.2s, border-color 0.15s, background 0.15s;
+  transition: opacity 0.2s, border-color var(--t), background var(--t), transform var(--t-fast), box-shadow var(--t);
 }
 
 .player-card:hover {
-  border-color: #2a3a5e;
-  background: #232842;
+  border-color: var(--line-strong, #2a3a5e);
+  background: var(--surface-2, #232842);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
 }
 
 .player-card.offline {

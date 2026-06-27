@@ -2,6 +2,7 @@
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
+  animation: page-enter 0.4s var(--ease) both;
 }
 
 .properties-page h2 {
