@@ -34,9 +34,8 @@ import {
   TELLRAW_COLORS,
   type TellrawColor,
 } from '../../lib/playerCommands'
+import { useBlueMapUrl } from '../../lib/settings'
 import './PlayerPanel.css'
-
-const BLUEMAP_URL = import.meta.env.VITE_BLUEMAP_URL as string | undefined
 
 interface Props {
   player: Player | null
@@ -69,6 +68,7 @@ function formatSession(onlineSince?: string, online?: boolean): string {
 export function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: Props) {
   const { running, sendCommand } = useServer()
   const { toast } = useToast()
+  const bluemapUrl = useBlueMapUrl()
   const [reason, setReason] = useState('')
   const [tpTarget, setTpTarget] = useState('')
   const [coords, setCoords] = useState({ x: '', y: '', z: '' })
@@ -335,13 +335,13 @@ export function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefr
           <section className="panel-section">
             <h4>External</h4>
             <div className="panel-row">
-              {BLUEMAP_URL ? (
-                <a className="panel-action" href={BLUEMAP_URL} target="_blank" rel="noreferrer">
+              {bluemapUrl ? (
+                <a className="panel-action" href={bluemapUrl} target="_blank" rel="noreferrer">
                   <MapIcon size={16} /> View on BlueMap
                 </a>
               ) : (
-                <span className="panel-note" title="Set VITE_BLUEMAP_URL to your BlueMap address">
-                  <MapIcon size={16} /> BlueMap not configured
+                <span className="panel-note" title="Add your BlueMap URL in Settings">
+                  <MapIcon size={16} /> Set a BlueMap URL in Settings
                 </span>
               )}
             </div>

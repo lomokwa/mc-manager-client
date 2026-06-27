@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Terminal, Users, FolderOpen, Settings, type LucideIcon } from 'lucide-react'
+import { Terminal, Users, FolderOpen, Settings, SlidersHorizontal, type LucideIcon } from 'lucide-react'
 import './Sidebar.css'
 
 const navItems: { to: string; label: string; icon: LucideIcon }[] = [
@@ -7,6 +7,7 @@ const navItems: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/players', label: 'Players', icon: Users },
   { to: '/files', label: 'Files', icon: FolderOpen },
   { to: '/properties', label: 'Properties', icon: Settings },
+  { to: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ]
 
 function Sidebar() {
