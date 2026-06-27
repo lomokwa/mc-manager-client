@@ -49,6 +49,11 @@
   font-weight: 500;
 }
 
+.sidebar-logout {
+  margin-top: auto;
+  border-top: 1px solid #0f3460;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 100%;

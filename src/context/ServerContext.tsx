@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useAuth } from './AuthContext'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
-const API_KEY = import.meta.env.VITE_API_KEY ?? ''
 
 type MessageListener = (data: string) => void
 
@@ -22,6 +22,7 @@ const ServerContext = createContext<ServerContextType | null>(null)
 const MAX_LOG_LINES = 1000
 
 export function ServerProvider({ children }: { children: ReactNode }) {
+  const { token, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -37,22 +38,25 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-API-Key': API_KEY,
+    'Authorization': `Bearer ${token}`,
     'ngrok-skip-browser-warning': 'true',
   }
 
   const refreshStatus = () => {
     fetch(`${API_BASE}/status`, { headers })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401) { logout(); return }
+        return res.json()
+      })
       .then((data) => {
-        if (data.success) setRunning(data.data.running)
+        if (data?.success) setRunning(data.data.running)
       })
       .catch(() => {})
   }
 
   const connectWs = useCallback(() => {
     if (wsRef.current) return
-    const ws = new WebSocket(`${WS_URL}?key=${encodeURIComponent(API_KEY)}`)
+    const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token ?? '')}`)
     ws.onopen = () => {
       wsRef.current = ws
     }
@@ -67,7 +71,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     ws.onerror = () => {
       wsRef.current = null
     }
-  }, [])
+  }, [token])
 
   // Manage WebSocket lifecycle based on running state
   useEffect(() => {

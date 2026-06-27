@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { Terminal, Users, FolderOpen, Settings, type LucideIcon } from 'lucide-react'
+import { Terminal, Users, FolderOpen, Settings, LogOut, type LucideIcon } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 import './Sidebar.css'
 
 const navItems: { to: string; label: string; icon: LucideIcon }[] = [
@@ -10,6 +11,8 @@ const navItems: { to: string; label: string; icon: LucideIcon }[] = [
 ]
 
 function Sidebar() {
+  const { logout } = useAuth()
+
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
@@ -25,6 +28,10 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <button className="sidebar-item sidebar-logout" onClick={logout}>
+        <LogOut className="sidebar-icon" size={18} />
+        <span className="sidebar-label">Logout</span>
+      </button>
     </aside>
   )
 }
