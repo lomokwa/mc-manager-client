@@ -96,8 +96,12 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     return () => { listenersRef.current.delete(listener) }
   }, [])
 
+  // Poll status so the UI reflects the server starting, stopping or crashing
+  // even when that happens outside this client (not only on mount / WS close).
   useEffect(() => {
     refreshStatus()
+    const id = setInterval(refreshStatus, 5000)
+    return () => clearInterval(id)
   }, [])
 
   const handleStart = async () => {
