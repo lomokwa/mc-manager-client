@@ -2,6 +2,7 @@
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
+  animation: page-enter 0.4s var(--ease) both;
 }
 
 .properties-page h2 {
@@ -65,6 +66,32 @@
 
 .btn-save:hover {
   opacity: 0.9;
+}
+
+.props-loading {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #a0a0b0;
+}
+
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-msg {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.save-success {
+  color: #4ecca3;
+}
+
+.save-error {
+  color: #e94560;
 }
 
 @media (max-width: 768px) {
