@@ -26,6 +26,7 @@ interface ServerContextType {
   error: string | null
   logs: string[]
   appendLog: (line: string) => void
+  clearLogs: () => void
   handleStart: () => Promise<void>
   handleStop: () => Promise<void>
   sendCommand: (cmd: string) => void
@@ -50,6 +51,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next
     })
   }, [])
+
+  const clearLogs = useCallback(() => setLogs([]), [])
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -165,7 +168,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, error, logs, appendLog, handleStart, handleStop, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, error, logs, appendLog, clearLogs, handleStart, handleStop, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )

@@ -142,6 +142,9 @@
 .log-line {
   white-space: pre-wrap;
   word-break: break-all;
+  /* Skip rendering off-screen lines — cheap native virtualization for volume. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.2em;
 }
 
 .terminal-input {
