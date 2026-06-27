@@ -13,6 +13,7 @@ function Players() {
   const [players, setPlayers] = useState<Player[]>([])
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Player | null>(null)
+  const [worldSpawn, setWorldSpawn] = useState<{ x: number; y: number; z: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -43,6 +44,23 @@ function Players() {
   useEffect(() => {
     fetchPlayers()
   }, [fetchPlayers])
+
+  // Load the world spawn (for "teleport to spawn"); refetch when the server
+  // starts, in case the world was just generated. Older servers without the
+  // /world endpoint simply leave it null and the spawn button stays disabled.
+  useEffect(() => {
+    let cancelled = false
+    apiFetch<{ level_name: string; spawn?: { x: number; y: number; z: number } }>('/world')
+      .then((w) => {
+        if (!cancelled) setWorldSpawn(w.spawn ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setWorldSpawn(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [running])
 
   // Subscribe to the shared console WebSocket for join/leave events so the
   // roster stays current while players come and go.
@@ -150,7 +168,7 @@ function Players() {
       <PlayerPanel
         player={selected}
         onlinePlayers={onlinePlayers}
-        worldSpawn={null}
+        worldSpawn={worldSpawn}
         onClose={() => setSelected(null)}
         onRefresh={() => fetchPlayers(true)}
       />
