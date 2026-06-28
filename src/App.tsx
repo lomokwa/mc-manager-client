@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 import Sidebar from './components/sidebar/Sidebar'
 import Navbar from './components/navbar/Navbar'
-import Console from './pages/Console'
-import Players from './pages/Players'
-import Properties from './pages/Properties'
-import Login from './pages/Login'
-import Register from './pages/Register'
+import Console from './pages/console/Console'
+import Players from './pages/players/Players'
+import ServerSetup from './pages/server/ServerSetup'
+import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
 import { ServerProvider } from './context/ServerContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -35,7 +35,7 @@ function AppRoutes() {
                   <Routes>
                     <Route path="/" element={<Console />} />
                     <Route path="/players" element={<Players />} />
-                    <Route path="/properties" element={<Properties />} />
+                    <Route path="/server" element={<ServerSetup />} />
                   </Routes>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useServer } from '../context/ServerContext'
-import { useAuth } from '../context/AuthContext'
-import type { Player, APIResponse } from '../types/player'
+import { useServer } from '../../context/ServerContext'
+import { useAuth } from '../../context/AuthContext'
+import type { Player, APIResponse } from '../../types/player'
 import './Players.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'

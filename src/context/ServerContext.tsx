@@ -6,15 +6,34 @@ const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
 
 type MessageListener = (data: string) => void
 
+export interface ServerInfo {
+  serverType: string
+  gameVersion: string
+  loaderVersion?: string
+}
+
 interface ServerContextType {
   running: boolean
   loading: boolean
+  serverExists: boolean
+  serverInfo: ServerInfo | null
   logs: string[]
   appendLog: (line: string) => void
   handleStart: () => Promise<void>
   handleStop: () => Promise<void>
+  createServer: (config: CreateServerConfig) => Promise<void>
+  deleteServer: () => Promise<void>
   sendCommand: (cmd: string) => void
   subscribe: (listener: MessageListener) => () => void
+}
+
+export interface CreateServerConfig {
+  serverType: string
+  releaseVersion: string
+  loaderVersion?: string
+  createLaunchScript: boolean
+  configureProperties: boolean
+  properties: Record<string, string>
 }
 
 const ServerContext = createContext<ServerContextType | null>(null)
@@ -25,6 +44,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const { token, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [serverExists, setServerExists] = useState(false)
+  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null)
   const [logs, setLogs] = useState<string[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Set<MessageListener>>(new Set())
@@ -50,6 +71,29 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       })
       .then((data) => {
         if (data?.success) setRunning(data.data.running)
+      })
+      .catch(() => {})
+  }
+
+  const refreshServerExists = () => {
+    fetch(`${API_BASE}/server`, { headers })
+      .then((res) => {
+        if (res.status === 401) { logout(); return }
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.success) {
+          setServerExists(data.data.exists)
+          if (data.data.exists && data.data.serverType) {
+            setServerInfo({
+              serverType: data.data.serverType,
+              gameVersion: data.data.gameVersion,
+              loaderVersion: data.data.loaderVersion,
+            })
+          } else {
+            setServerInfo(null)
+          }
+        }
       })
       .catch(() => {})
   }
@@ -98,6 +142,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshStatus()
+    refreshServerExists()
   }, [])
 
   const handleStart = async () => {
@@ -106,11 +151,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_BASE}/start`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          createLaunchScript: true,
-          configureProperties: false,
-          properties: {},
-        }),
       })
       const data = await res.json()
       if (data.success) {
@@ -141,8 +181,49 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const createServer = async (config: CreateServerConfig) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/server`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(config),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create server')
+      }
+      setServerExists(true)
+      setServerInfo({
+        serverType: config.serverType,
+        gameVersion: config.releaseVersion,
+        loaderVersion: config.loaderVersion,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteServer = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/server`, {
+        method: 'DELETE',
+        headers,
+      })
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to delete server')
+      }
+      setServerExists(false)
+      setServerInfo(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <ServerContext.Provider value={{ running, loading, logs, appendLog, handleStart, handleStop, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )

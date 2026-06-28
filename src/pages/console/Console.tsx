@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useServer } from '../context/ServerContext'
+import { useServer } from '../../context/ServerContext'
 
 function Console() {
   const { running, logs, appendLog, sendCommand } = useServer()
