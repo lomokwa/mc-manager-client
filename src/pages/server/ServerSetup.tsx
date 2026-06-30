@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Undo2 } from 'lucide-react'
 import { useServer, type CreateServerConfig } from '../../context/ServerContext'
 import { defaultProperties, basicPropertyFields, advancedPropertyFields, type PropertyField } from '../../types/properties'
 import './ServerSetup.css'
@@ -320,18 +321,22 @@ function ServerSetup() {
             {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
           </button>
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={!hasChanges}
-            onClick={handleDiscard}
-          >
-            Discard Changes
-          </button>
+          <div className="properties-actions-right">
+            {hasChanges && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleDiscard}
+              >
+                <Undo2 size={14} />
+                Discard Changes
+              </button>
+            )}
 
-          <button className="btn btn-primary" disabled={loading || saving || !hasChanges} onClick={handleSaveProperties}>
-            {saving ? 'Saving...' : 'Save Properties'}
-          </button>
+            <button className="btn btn-primary" disabled={loading || saving || !hasChanges} onClick={handleSaveProperties}>
+              {saving ? 'Saving...' : 'Save Properties'}
+            </button>
+          </div>
         </div>
 
         {saveSuccess && (
