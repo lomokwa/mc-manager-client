@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Undo2 } from 'lucide-react'
+import { Undo2, Save } from 'lucide-react'
 import { useServer, type CreateServerConfig } from '../../context/ServerContext'
 import { defaultProperties, basicPropertyFields, advancedPropertyFields, type PropertyField } from '../../types/properties'
 import './ServerSetup.css'
@@ -334,6 +334,7 @@ function ServerSetup() {
             )}
 
             <button className="btn btn-primary" disabled={loading || saving || !hasChanges} onClick={handleSaveProperties}>
+              <Save size={14} />
               {saving ? 'Saving...' : 'Save Properties'}
             </button>
           </div>
