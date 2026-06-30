@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Terminal, Users, FolderOpen, Server, LogOut, type LucideIcon } from 'lucide-react'
+import { Terminal, Users, UserCog, FolderOpen, Server, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import './Sidebar.css'
 
 const navItems: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Console', icon: Terminal },
-  { to: '/players', label: 'Players', icon: Users },
+  { to: '/players', label: 'Players', icon: Users  },
+  { to: '/users', label: 'Users', icon: UserCog },
   { to: '/files', label: 'Files', icon: FolderOpen },
   { to: '/server', label: 'Server', icon: Server },
 ]

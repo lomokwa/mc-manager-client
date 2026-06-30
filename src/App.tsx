@@ -5,6 +5,7 @@ import Navbar from './components/navbar/Navbar'
 import Console from './pages/console/Console'
 import Players from './pages/players/Players'
 import ServerSetup from './pages/server/ServerSetup'
+import Users from './pages/users/Users'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import { ServerProvider } from './context/ServerContext'
@@ -35,6 +36,7 @@ function AppRoutes() {
                   <Routes>
                     <Route path="/" element={<Console />} />
                     <Route path="/players" element={<Players />} />
+                    <Route path="/users" element={<Users />} />
                     <Route path="/server" element={<ServerSetup />} />
                   </Routes>
                 </div>
