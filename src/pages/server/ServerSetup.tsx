@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useServer, type CreateServerConfig } from '../../context/ServerContext'
 import { defaultProperties, basicPropertyFields, advancedPropertyFields, type PropertyField } from '../../types/properties'
 import './ServerSetup.css'
@@ -13,7 +13,7 @@ interface FabricLoaderVersion {
 }
 
 function ServerSetup() {
-  const { serverExists, loading, createServer, deleteServer, running, serverInfo } = useServer()
+  const { serverExists, loading, createServer, deleteServer, updateProperties, fetchProperties, running, serverInfo, handleStop, handleStart } = useServer()
 
   const [serverType, setServerType] = useState('vanilla')
   const [releaseVersion, setReleaseVersion] = useState('')
@@ -70,6 +70,41 @@ function ServerSetup() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [savedProperties, setSavedProperties] = useState<Record<string, string>>({})
+
+  const hasChanges = Object.keys(savedProperties).length > 0 &&
+    Object.keys(properties).some((key) => properties[key] !== savedProperties[key])
+
+  // Warn before navigating away with unsaved changes
+  useEffect(() => {
+    if (!hasChanges) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasChanges])
+
+  const handleDiscard = useCallback(() => {
+    setProperties({ ...savedProperties })
+    setError('')
+  }, [savedProperties])
+
+  // Load properties from server when server exists
+  useEffect(() => {
+    if (serverExists) {
+      fetchProperties()
+        .then((serverProps) => {
+          if (serverProps && Object.keys(serverProps).length > 0) {
+            setProperties((prev) => ({ ...prev, ...serverProps }))
+            setSavedProperties((prev) => ({ ...prev, ...serverProps }))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [serverExists])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,6 +123,47 @@ function ServerSetup() {
       await createServer(config)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create server')
+    }
+  }
+
+  const handleSaveProperties = async () => {
+    setError('')
+    setSaveSuccess(false)
+
+    // Client-side validation for numeric fields
+    const numericRules: Record<string, { min: number; max: number; label: string }> = {
+      'server-port': { min: 1, max: 65535, label: 'Server Port' },
+      'query.port': { min: 1, max: 65535, label: 'Query Port' },
+      'rcon.port': { min: 1, max: 65535, label: 'RCON Port' },
+      'max-players': { min: 1, max: 2147483647, label: 'Max Players' },
+      'view-distance': { min: 3, max: 32, label: 'View Distance' },
+      'simulation-distance': { min: 3, max: 32, label: 'Simulation Distance' },
+      'op-permission-level': { min: 1, max: 4, label: 'OP Permission Level' },
+      'function-permission-level': { min: 1, max: 4, label: 'Function Permission Level' },
+      'spawn-protection': { min: 0, max: 2147483647, label: 'Spawn Protection' },
+      'entity-broadcast-range-percentage': { min: 10, max: 500, label: 'Entity Broadcast Range %' },
+      'max-world-size': { min: 1, max: 29999984, label: 'Max World Size' },
+    }
+
+    for (const [key, rule] of Object.entries(numericRules)) {
+      if (properties[key] !== undefined) {
+        const num = Number(properties[key])
+        if (isNaN(num) || num < rule.min || num > rule.max) {
+          setError(`${rule.label} must be between ${rule.min} and ${rule.max}`)
+          return
+        }
+      }
+    }
+
+    setSaving(true)
+    try {
+      await updateProperties(properties)
+      setSaveSuccess(true)
+      setSavedProperties({ ...properties })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save properties')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -244,10 +320,49 @@ function ServerSetup() {
             {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
           </button>
 
-          <button className="btn btn-primary" disabled={loading}>
-            Save Properties
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!hasChanges}
+            onClick={handleDiscard}
+          >
+            Discard Changes
+          </button>
+
+          <button className="btn btn-primary" disabled={loading || saving || !hasChanges} onClick={handleSaveProperties}>
+            {saving ? 'Saving...' : 'Save Properties'}
           </button>
         </div>
+
+        {saveSuccess && (
+          <div className="modal-overlay" onClick={() => setSaveSuccess(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Properties Saved</h3>
+              <p>Changes to server properties require a restart to take effect.</p>
+              <div className="modal-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setSaveSuccess(false)}
+                >
+                  OK
+                </button>
+                {running && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={async () => {
+                      setSaveSuccess(false)
+                      await handleStop()
+                      await handleStart()
+                    }}
+                    disabled={loading}
+                  >
+                    Restart Now
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     )

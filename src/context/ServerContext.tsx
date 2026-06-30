@@ -23,6 +23,8 @@ interface ServerContextType {
   handleStop: () => Promise<void>
   createServer: (config: CreateServerConfig) => Promise<void>
   deleteServer: () => Promise<void>
+  updateProperties: (properties: Record<string, string>) => Promise<void>
+  fetchProperties: () => Promise<Record<string, string>>
   sendCommand: (cmd: string) => void
   subscribe: (listener: MessageListener) => () => void
 }
@@ -222,8 +224,31 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateProperties = async (properties: Record<string, string>) => {
+    const res = await fetch(`${API_BASE}/properties`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ properties }),
+    })
+    if (res.status === 401) { logout(); return }
+    const data = await res.json()
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to update properties')
+    }
+  }
+
+  const fetchProperties = async (): Promise<Record<string, string>> => {
+    const res = await fetch(`${API_BASE}/properties`, { headers })
+    if (res.status === 401) { logout(); return {} }
+    const data = await res.json()
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch properties')
+    }
+    return data.data
+  }
+
   return (
-    <ServerContext.Provider value={{ running, loading, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )
