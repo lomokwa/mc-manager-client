@@ -15,6 +15,7 @@ export interface ServerInfo {
 interface ServerContextType {
   running: boolean
   loading: boolean
+  actionError: string | null
   serverExists: boolean
   serverInfo: ServerInfo | null
   logs: string[]
@@ -46,6 +47,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const { token, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [serverExists, setServerExists] = useState(false)
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null)
   const [logs, setLogs] = useState<string[]>([])
@@ -162,6 +164,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const handleStart = async () => {
     setLoading(true)
+    setActionError(null)
     try {
       const res = await fetch(`${API_BASE}/start`, {
         method: 'POST',
@@ -170,9 +173,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(true)
+      } else {
+        setActionError(data.error || 'Failed to start the server')
       }
     } catch {
-      // handled by consumers
+      setActionError('Could not reach the server')
     } finally {
       setLoading(false)
     }
@@ -180,6 +185,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const handleStop = async () => {
     setLoading(true)
+    setActionError(null)
     try {
       const res = await fetch(`${API_BASE}/stop`, {
         method: 'POST',
@@ -188,9 +194,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(false)
+      } else {
+        setActionError(data.error || 'Failed to stop the server')
       }
     } catch {
-      // handled by consumers
+      setActionError('Could not reach the server')
     } finally {
       setLoading(false)
     }
@@ -261,7 +269,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, actionError, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )
