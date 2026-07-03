@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
-import { ToastProvider } from '../../components/toast/ToastContext'
 import PlayerPanel from '../../components/player/PlayerPanel'
 import type { Player, WorldInfo, APIResponse } from '../../types/player'
 import './Players.css'
@@ -91,7 +90,7 @@ function Players() {
   const refreshRoster = useCallback(() => setFetchTrigger((n) => n + 1), [])
 
   return (
-    <ToastProvider>
+    <>
       <div className="players-page">
         <div className="players-header">
           <h2>Players</h2>
@@ -162,7 +161,7 @@ function Players() {
           onRefresh={refreshRoster}
         />
       )}
-    </ToastProvider>
+    </>
   )
 }
 

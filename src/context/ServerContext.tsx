@@ -278,6 +278,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useServer() {
   const context = useContext(ServerContext)
   if (!context) throw new Error('useServer must be used within ServerProvider')

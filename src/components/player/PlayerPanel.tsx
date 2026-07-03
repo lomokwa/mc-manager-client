@@ -12,9 +12,8 @@ import {
   directMessageCommand, TELLRAW_COLORS, type TellrawColor,
 } from '../../lib/playerCommands'
 import { formatPlaytime, formatSessionLength } from '../../lib/playtime'
+import { useBlueMapUrl } from '../../lib/settings'
 import './PlayerPanel.css'
-
-const BLUEMAP_URL: string | undefined = import.meta.env.VITE_BLUEMAP_URL
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -33,6 +32,7 @@ type ConfirmKind = 'kick' | 'ban' | 'ipban' | null
 function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: PlayerPanelProps) {
   const { running, sendCommand } = useServer()
   const { toast } = useToast()
+  const bluemapUrl = useBlueMapUrl()
   const panelRef = useRef<HTMLDivElement>(null)
 
   const [closing, setClosing] = useState(false)
@@ -199,8 +199,9 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
 
         <div className="pp-body">
           {/* Insights */}
-          {hasInsights && (
+          {(hasInsights || bluemapUrl) && (
             <section className="pp-section">
+              {hasInsights && (
               <div className="pp-stats">
                 {player.total_playtime_ticks !== undefined && (
                   <div className="pp-stat">
@@ -224,8 +225,9 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
                   </div>
                 )}
               </div>
-              {BLUEMAP_URL && (
-                <a className="pp-maplink" href={BLUEMAP_URL} target="_blank" rel="noreferrer">
+              )}
+              {bluemapUrl && (
+                <a className="pp-maplink" href={bluemapUrl} target="_blank" rel="noreferrer">
                   <MapIcon size={15} />
                   View on live map
                 </a>
