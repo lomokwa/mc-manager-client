@@ -1,1 +1,10 @@
 /* Navbar styles - moved from App.css header styles */
+
+.action-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
