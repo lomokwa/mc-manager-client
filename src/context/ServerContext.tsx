@@ -103,19 +103,23 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const connectWs = useCallback(() => {
     if (wsRef.current) return
     const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token ?? '')}`)
-    ws.onopen = () => {
-      wsRef.current = ws
-    }
+    // Track the socket immediately, not in onopen: if it's only assigned
+    // once the handshake finishes, a second connect started in the meantime
+    // creates a duplicate socket, and cleanup can't close a socket it never
+    // saw (it leaks and keeps streaming into the log state).
+    wsRef.current = ws
     ws.onmessage = (e) => {
       appendLog(e.data)
       listenersRef.current.forEach((fn) => fn(e.data))
     }
     ws.onclose = () => {
-      wsRef.current = null
+      // Only clear the ref if it still points at this socket — a stale
+      // handler must not null out a newer connection.
+      if (wsRef.current === ws) wsRef.current = null
       refreshStatus()
     }
     ws.onerror = () => {
-      wsRef.current = null
+      if (wsRef.current === ws) wsRef.current = null
     }
   }, [token])
 
@@ -134,7 +138,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, [running, connectWs])
 
   const sendCommand = useCallback((cmd: string) => {
-    wsRef.current?.send(cmd)
+    // The ref is set while the socket is still connecting; send() on a
+    // CONNECTING socket throws, so only send once it's open.
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(cmd)
+    }
   }, [])
 
   const subscribe = useCallback((listener: MessageListener) => {
