@@ -153,6 +153,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshStatus()
     refreshServerExists()
+    // Keep the running state honest even when nothing reconnects the
+    // WebSocket (e.g. the server was started/stopped from another session
+    // or crashed silently).
+    const id = setInterval(refreshStatus, 5000)
+    return () => clearInterval(id)
   }, [])
 
   const handleStart = async () => {
