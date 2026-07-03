@@ -5,9 +5,22 @@ function Console() {
   const { running, logs, appendLog, sendCommand } = useServer()
   const [command, setCommand] = useState('')
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const outputRef = useRef<HTMLDivElement>(null)
+  // Whether the view is pinned to the bottom. Only then do new lines
+  // auto-scroll — scrolling up to read older output stays put instead of
+  // being yanked back down on every incoming line.
+  const pinnedRef = useRef(true)
+
+  const handleScroll = () => {
+    const el = outputRef.current
+    if (!el) return
+    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+  }
 
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (pinnedRef.current) {
+      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [logs])
 
   const handleSendCommand = (e: React.FormEvent) => {
@@ -20,7 +33,7 @@ function Console() {
 
   return (
     <main className="terminal">
-      <div className="terminal-output">
+      <div className="terminal-output" ref={outputRef} onScroll={handleScroll}>
         {logs.map((line, i) => (
           <div key={i} className="log-line">{line}</div>
         ))}
