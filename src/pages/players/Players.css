@@ -2,6 +2,7 @@
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
+  color: #e9ecf3;
 }
 
 .players-header {
@@ -17,55 +18,116 @@
 }
 
 .btn-refresh {
-  padding: 0.4rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #7c3aed);
-  color: #fff;
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #26365f;
+  border-radius: 8px;
+  background: transparent;
+  color: #cdd3df;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
 }
 
-.btn-refresh:hover {
-  opacity: 0.85;
+.btn-refresh:hover:not(:disabled) {
+  border-color: #4ecca3;
+  color: #4ecca3;
 }
 
 .btn-refresh:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+.btn-refresh .spin {
+  animation: players-spin 0.8s linear infinite;
+}
+
+@keyframes players-spin {
+  to { transform: rotate(360deg); }
+}
+
 .players-loading,
-.players-error,
-.players-empty {
+.players-error {
   font-size: 0.9rem;
-  color: var(--color-text-muted, #888);
+  color: #a6aec0;
 }
 
 .players-error {
-  color: #f87171;
+  color: #ff6b81;
+}
+
+.players-empty {
+  max-width: 460px;
+  padding: 2rem 1.5rem;
+  border: 1px dashed #2a3a63;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.players-empty-title {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e9ecf3;
+}
+
+.players-empty-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #a6aec0;
 }
 
 .players-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-width: 700px;
+  max-width: 640px;
 }
 
 .player-card {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface, #1e1e2e);
-  border-radius: 8px;
-  transition: opacity 0.2s;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: #1b2646;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), background 0.16s, border-color 0.16s;
+}
+
+.player-card:hover {
+  background: #212d52;
+  border-color: #2f3f6b;
+  transform: translateY(-1px);
+}
+
+.player-card:focus-visible {
+  outline: none;
+  border-color: #4ecca3;
+  box-shadow: 0 0 0 3px rgba(78, 204, 163, 0.22);
+}
+
+.player-card.selected {
+  border-color: #4ecca3;
+  background: #212d52;
 }
 
 .player-card.offline {
-  opacity: 0.5;
+  opacity: 0.62;
+}
+
+.player-card.offline:hover {
+  opacity: 0.85;
 }
 
 .player-card.offline .player-avatar {
@@ -81,7 +143,7 @@
 
 .player-card.online .player-status-indicator {
   background: #4ade80;
-  box-shadow: 0 0 6px #4ade8080;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
 }
 
 .player-card.offline .player-status-indicator {
@@ -91,8 +153,9 @@
 .player-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 4px;
+  border-radius: 6px;
   image-rendering: pixelated;
+  flex-shrink: 0;
 }
 
 .player-info {
@@ -106,6 +169,7 @@
 .player-name {
   font-size: 0.95rem;
   font-weight: 500;
+  color: #e9ecf3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -118,36 +182,61 @@
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .badge-op {
-  background: #fbbf2440;
-  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.18);
+  color: #fbcf6a;
 }
 
 .badge-banned {
-  background: #f8717140;
-  color: #f87171;
+  background: rgba(233, 69, 96, 0.18);
+  color: #ff6b81;
 }
 
 .badge-whitelisted {
-  background: #60a5fa40;
-  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.18);
+  color: #8fc0ff;
 }
 
 .player-status-text {
   font-size: 0.8rem;
-  color: var(--color-text-muted, #888);
+  color: #a6aec0;
   white-space: nowrap;
 }
 
 .player-card.online .player-status-text {
-  color: #4ade80;
+  color: #6ee7b0;
+}
+
+.player-chevron {
+  color: #6b7590;
+  flex-shrink: 0;
+  transition: transform 0.16s, color 0.16s;
+}
+
+.player-card:hover .player-chevron {
+  color: #a6aec0;
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-card,
+  .player-chevron {
+    transition: none;
+  }
+  .player-card:hover {
+    transform: none;
+  }
+  .btn-refresh .spin {
+    animation: none;
+  }
 }
 
 @media (max-width: 768px) {
