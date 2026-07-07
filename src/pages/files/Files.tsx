@@ -235,8 +235,8 @@ function Files() {
 
       {!loading && !error && entries.length > 0 && (
         <ul className="files-list">
-          {entries.map((entry) => (
-            <li key={entry.name} className="file-row">
+          {entries.map((entry, i) => (
+            <li key={entry.name} className="file-row stagger-item" style={{ '--i': Math.min(i, 14) } as React.CSSProperties}>
               <button className="file-main" onClick={() => openEntry(entry)}>
                 {entry.is_dir ? (
                   <Folder size={17} className="file-icon file-icon-dir" />

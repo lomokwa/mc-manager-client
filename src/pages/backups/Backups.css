@@ -46,6 +46,11 @@
   transform: translateY(-1px);
 }
 
+.bbtn:active:not(:disabled) {
+  transform: scale(0.95);
+  transition: transform var(--t-press);
+}
+
 .bbtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -238,6 +243,12 @@
 
 .backups-empty svg {
   color: var(--text-mute);
+  animation: backups-float 3.5s ease-in-out infinite;
+}
+
+@keyframes backups-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 .backups-empty p {
@@ -298,6 +309,15 @@
   align-items: center;
   gap: 0.4rem;
   flex-shrink: 0;
+}
+
+.backup-confirm {
+  animation: backup-pop 0.18s var(--ease) both;
+}
+
+@keyframes backup-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
 }
 
 .confirm-q {

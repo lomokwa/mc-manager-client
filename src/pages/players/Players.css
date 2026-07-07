@@ -3,6 +3,7 @@
   overflow-y: auto;
   height: 100%;
   color: #e9ecf3;
+  animation: page-enter 0.4s var(--ease) both;
 }
 
 .players-header {
@@ -115,6 +116,11 @@
   outline: none;
   border-color: #4ecca3;
   box-shadow: 0 0 0 3px rgba(78, 204, 163, 0.22);
+}
+
+.player-card:active {
+  transform: scale(0.985);
+  transition: transform var(--t-press);
 }
 
 .player-card.selected {

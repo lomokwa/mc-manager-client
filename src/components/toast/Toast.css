@@ -64,6 +64,21 @@
   }
 }
 
+.toast.leaving {
+  animation: toast-out 0.24s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(12px) scale(0.98);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast {
     animation: toast-fade 0.2s ease both;

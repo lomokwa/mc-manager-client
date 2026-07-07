@@ -241,8 +241,8 @@ function Backups() {
 
       {!loading && !error && backups.length > 0 && (
         <ul className="backups-list">
-          {backups.map((b) => (
-            <li key={b.name} className="backup-row">
+          {backups.map((b, i) => (
+            <li key={b.name} className="backup-row stagger-item" style={{ '--i': Math.min(i, 12) } as React.CSSProperties}>
               <Archive size={17} className="backup-icon" />
               <div className="backup-info">
                 <span className="backup-name">{b.name}</span>

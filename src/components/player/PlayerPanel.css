@@ -139,6 +139,10 @@
   background: rgba(255, 255, 255, 0.06);
   color: var(--pp-text);
 }
+.pp-close:active {
+  transform: scale(0.9) rotate(90deg);
+  transition: transform var(--t-press);
+}
 
 /* Tags */
 .pp-tags {
@@ -189,6 +193,22 @@
 }
 .pp-section:first-child {
   border-top: none;
+}
+
+/* Sections settle in just behind the panel slide. */
+.pp-body > .pp-section {
+  animation: pp-sec 0.34s var(--pp-ease) both;
+}
+.pp-body > .pp-section:nth-child(1) { animation-delay: 0.05s; }
+.pp-body > .pp-section:nth-child(2) { animation-delay: 0.09s; }
+.pp-body > .pp-section:nth-child(3) { animation-delay: 0.13s; }
+.pp-body > .pp-section:nth-child(4) { animation-delay: 0.17s; }
+.pp-body > .pp-section:nth-child(5) { animation-delay: 0.21s; }
+.pp-body > .pp-section:nth-child(6) { animation-delay: 0.25s; }
+
+@keyframes pp-sec {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
 }
 .pp-section-title {
   margin: 0 0 0.7rem;
@@ -297,6 +317,11 @@
   color: var(--pp-brand);
 }
 
+.pp-toggle:active:not(:disabled) {
+  transform: scale(0.95);
+  transition: transform var(--t-press);
+}
+
 /* Buttons */
 .pp-btn {
   display: inline-flex;
@@ -319,7 +344,8 @@
   transform: translateY(-1px);
 }
 .pp-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.96);
+  transition: transform var(--t-press);
 }
 .pp-btn:disabled {
   opacity: 0.42;
@@ -394,6 +420,12 @@
   display: flex;
   gap: 0.4rem;
   flex: 1 1 100%;
+  animation: pp-pop 0.18s var(--pp-ease) both;
+}
+
+@keyframes pp-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Inputs */

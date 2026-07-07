@@ -19,11 +19,12 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
-        {navItems.map((item) => (
+        {navItems.map((item, i) => (
           <NavLink
             key={item.to}
             to={item.to}
-            className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `sidebar-item stagger-item ${isActive ? 'active' : ''}`}
+            style={{ '--i': i } as React.CSSProperties}
             end={item.to === '/'}
           >
             <item.icon className="sidebar-icon" size={18} />

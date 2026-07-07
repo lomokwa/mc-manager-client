@@ -7,6 +7,7 @@ interface ToastItem {
   id: number
   message: string
   type: ToastType
+  leaving?: boolean
 }
 
 interface ToastApi {
@@ -17,6 +18,7 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null)
 
 const TOAST_TTL_MS = 3200
+const TOAST_EXIT_MS = 240
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
@@ -27,6 +29,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback((message: string, type: ToastType = 'info') => {
     const id = (nextId.current += 1)
     setToasts((prev) => [...prev, { id, message, type }])
+    // Mark it leaving so it can animate out, then remove it.
+    setTimeout(() => {
+      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)))
+    }, TOAST_TTL_MS - TOAST_EXIT_MS)
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, TOAST_TTL_MS)
@@ -37,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>
+          <div key={t.id} className={`toast toast-${t.type} ${t.leaving ? 'leaving' : ''}`}>
             {t.message}
           </div>
         ))}

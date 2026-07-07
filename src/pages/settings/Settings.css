@@ -95,6 +95,11 @@
   box-shadow: 0 5px 16px var(--brand-glow);
 }
 
+.btn-save:active {
+  transform: scale(0.96);
+  transition: transform var(--t-press);
+}
+
 @media (max-width: 560px) {
   .setting-row {
     flex-direction: column;

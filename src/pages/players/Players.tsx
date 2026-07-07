@@ -120,11 +120,12 @@ function Players() {
 
         {!loading && !error && players.length > 0 && (
           <div className="players-list">
-            {players.map((player) => (
+            {players.map((player, i) => (
               <button
                 key={player.uuid}
                 type="button"
-                className={`player-card ${player.online ? 'online' : 'offline'} ${selectedUuid === player.uuid ? 'selected' : ''}`}
+                className={`player-card stagger-item ${player.online ? 'online' : 'offline'} ${selectedUuid === player.uuid ? 'selected' : ''}`}
+                style={{ '--i': Math.min(i, 12) } as React.CSSProperties}
                 onClick={() => setSelectedUuid(player.uuid)}
                 aria-haspopup="dialog"
               >
