@@ -41,11 +41,14 @@ interface PlayerPanelProps {
 type ConfirmKind = 'kick' | 'ban' | 'ipban' | null
 
 function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: PlayerPanelProps) {
-  const { running, sendCommand, logs } = useServer()
+  const { running, sendCommand, chatLog } = useServer()
   const { toast } = useToast()
   const bluemapUrl = useBlueMapUrl()
   const panelRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
+  // Whether the chat is pinned to its newest message (true while the user is
+  // at the bottom); gates whether an incoming message auto-scrolls.
+  const stickRef = useRef(true)
 
   const [closing, setClosing] = useState(false)
   const [reason, setReason] = useState('')
@@ -70,20 +73,26 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
   // Live conversation: the player's chat parsed from the console log (updates
   // as new lines stream in over the WebSocket) interleaved with our DMs.
   const conversation = useMemo<ChatEntry[]>(() => {
-    const them = parsePlayerChat(logs, player.name).map<ChatEntry>((m) => ({
+    const them = parsePlayerChat(chatLog, player.name).map<ChatEntry>((m) => ({
       key: `t${m.id}`, from: 'them', text: m.text, time: m.time, sort: m.id,
     }))
     const me = sentDms.map<ChatEntry>((d) => ({
       key: `m${d.seq}`, from: 'me', text: d.text, sort: d.at + 0.5,
     }))
     return [...them, ...me].sort((a, b) => a.sort - b.sort)
-  }, [logs, player.name, sentDms])
+  }, [chatLog, player.name, sentDms])
 
-  // Keep the chat scrolled to the newest message.
+  // Keep the chat pinned to the newest message, but only while the user is
+  // already at the bottom — scrolling up to read history stays put.
   useEffect(() => {
     const el = chatRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight
   }, [conversation])
+
+  const onChatScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+  }
 
   const online = player.online
   const canAct = running // console WebSocket is only live while the server runs
@@ -193,7 +202,10 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
     const text = message.trim()
     if (!text) return
     dispatch(directMessageCommand(player.name, message, msgColor), `Message sent to ${player.name}`)
-    setSentDms((s) => [...s, { seq: s.length, text, at: logs.length }])
+    // Sort just after the newest chat message present when we send, so our DM
+    // lands in order and later incoming messages fall below it.
+    const lastSeq = chatLog.length ? chatLog[chatLog.length - 1].seq : -1
+    setSentDms((s) => [...s, { seq: s.length, text, at: lastSeq }])
     setMessage('')
   }
 
@@ -413,7 +425,7 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
           <section className="pp-section">
             <h3 className="pp-section-title">Chat</h3>
             {conversation.length > 0 ? (
-              <div className="pp-chat" ref={chatRef}>
+              <div className="pp-chat" ref={chatRef} onScroll={onChatScroll}>
                 {conversation.map((m) => (
                   <div key={m.key} className={`pp-bubble pp-bubble-${m.from}`}>
                     <span className="pp-bubble-text">{m.text}</span>

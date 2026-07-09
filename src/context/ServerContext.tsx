@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
+import { isChatLine, type ChatLine } from '../lib/chat'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
@@ -19,6 +20,7 @@ interface ServerContextType {
   serverExists: boolean
   serverInfo: ServerInfo | null
   logs: string[]
+  chatLog: ChatLine[]
   appendLog: (line: string) => void
   clearLogs: () => void
   handleStart: () => Promise<void>
@@ -43,6 +45,9 @@ export interface CreateServerConfig {
 const ServerContext = createContext<ServerContextType | null>(null)
 
 const MAX_LOG_LINES = 1000
+// Chat gets its own, larger buffer so a player's history survives even a busy
+// console (chat lines are only a fraction of total server output).
+const MAX_CHAT_LINES = 2000
 
 export function ServerProvider({ children }: { children: ReactNode }) {
   const { token, logout } = useAuth()
@@ -52,6 +57,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [serverExists, setServerExists] = useState(false)
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [chatLog, setChatLog] = useState<ChatLine[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Set<MessageListener>>(new Set())
 
@@ -115,6 +121,15 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     wsRef.current = ws
     ws.onmessage = (e) => {
       appendLog(e.data)
+      // Keep chat lines in their own long-lived buffer, tagged with a
+      // monotonic seq so each message has a stable identity across rolls.
+      if (isChatLine(e.data)) {
+        setChatLog((prev) => {
+          const seq = prev.length ? prev[prev.length - 1].seq + 1 : 0
+          const next = [...prev, { seq, line: e.data }]
+          return next.length > MAX_CHAT_LINES ? next.slice(-MAX_CHAT_LINES) : next
+        })
+      }
       listenersRef.current.forEach((fn) => fn(e.data))
     }
     ws.onclose = () => {
@@ -272,7 +287,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, actionError, serverExists, serverInfo, logs, appendLog, clearLogs, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, actionError, serverExists, serverInfo, logs, chatLog, appendLog, clearLogs, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )
