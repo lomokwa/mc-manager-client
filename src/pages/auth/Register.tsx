@@ -17,11 +17,16 @@ function Register() {
   const [loading, setLoading] = useState(false)
   const [tokenValid, setTokenValid] = useState<boolean | null>(null)
 
+  // Reset validity when the token field is emptied. Adjusting state during
+  // render (guarded so it can't loop) is React's supported pattern for a
+  // derived reset, and keeps the synchronous set out of the effect where it
+  // trips react-hooks/set-state-in-effect.
+  if (!token && tokenValid !== null) {
+    setTokenValid(null)
+  }
+
   useEffect(() => {
-    if (!token) {
-      setTokenValid(null)
-      return
-    }
+    if (!token) return
     let cancelled = false
     fetch(`${API_BASE}/invitations/${encodeURIComponent(token)}`)
       .then((res) => res.json())

@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Type-check, build & test
+    name: Lint, type-check, build & test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,5 +16,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm run build
       - run: npm test

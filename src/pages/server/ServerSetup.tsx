@@ -30,11 +30,10 @@ function ServerSetup() {
 
   const [gameVersions, setGameVersions] = useState<GameVersion[]>([])
   const [loaderVersions, setLoaderVersions] = useState<string[]>([])
-  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [versionsLoading, setVersionsLoading] = useState(true)
 
   // Fetch game versions from Mojang manifest
   useEffect(() => {
-    setVersionsLoading(true)
     fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json')
       .then((res) => res.json())
       .then((data) => {
@@ -48,13 +47,18 @@ function ServerSetup() {
       .finally(() => setVersionsLoading(false))
   }, [])
 
+  // Clear stale Fabric loader choices when they no longer apply (render-phase
+  // adjustment, guarded against a render loop — keeps the synchronous clear out
+  // of the effect where it trips react-hooks/set-state-in-effect).
+  const loadersApply = serverType === 'fabric' && !!releaseVersion
+  if (!loadersApply && (loaderVersions.length > 0 || loaderVersion !== '')) {
+    setLoaderVersions([])
+    setLoaderVersion('')
+  }
+
   // Fetch Fabric loader versions when serverType is fabric and a game version is selected
   useEffect(() => {
-    if (serverType !== 'fabric' || !releaseVersion) {
-      setLoaderVersions([])
-      setLoaderVersion('')
-      return
-    }
+    if (serverType !== 'fabric' || !releaseVersion) return
 
     fetch(`https://meta.fabricmc.net/v2/versions/loader/${releaseVersion}`)
       .then((res) => res.json())
