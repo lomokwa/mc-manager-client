@@ -3,16 +3,15 @@ import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import PlayerPanel from '../../components/player/PlayerPanel'
-import type { Player, WorldInfo, APIResponse } from '../../types/player'
+import { apiFetch, authHeaders } from '../../lib/api'
+import type { Player, WorldInfo } from '../../types/player'
 import './Players.css'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 
 const JOIN_LEAVE_PATTERN = /joined the game|left the game/
 
 function Players() {
   const { running, subscribe } = useServer()
-  const { token } = useAuth()
+  const { token, logout } = useAuth()
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,45 +23,45 @@ function Players() {
   // Fetch players when fetchTrigger changes
   useEffect(() => {
     let cancelled = false
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
+    const headers = authHeaders(token)
 
-    fetch(`${API_BASE}/players`, { headers })
-      .then((res) => res.json())
-      .then((data: APIResponse<Player[]>) => {
+    apiFetch<Player[]>('/players', { headers })
+      .then((r) => {
         if (cancelled) return
-        if (data.success && data.data) {
-          const sorted = [...data.data].sort((a, b) => {
+        if (r.kind === 'ok') {
+          const sorted = [...r.data].sort((a, b) => {
             if (a.online !== b.online) return a.online ? -1 : 1
             return a.name.localeCompare(b.name)
           })
           setPlayers(sorted)
           setError(null) // recover from a prior transient error on refetch
+        } else if (r.kind === 'unauthorized') {
+          logout()
+        } else if (r.kind === 'network') {
+          setError('Could not connect to server')
         } else {
-          setError(data.error ?? 'Failed to fetch players')
+          setError(r.kind === 'error' ? r.message : 'Failed to fetch players')
         }
-      })
-      .catch(() => {
-        if (!cancelled) setError('Could not connect to server')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
 
     return () => { cancelled = true }
-  }, [token, fetchTrigger])
+  }, [token, fetchTrigger, logout])
 
   // World spawn (for "teleport to spawn"). Optional — degrades if unavailable.
   useEffect(() => {
     let cancelled = false
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
-    fetch(`${API_BASE}/world`, { headers })
-      .then((res) => res.json())
-      .then((data: APIResponse<WorldInfo>) => {
-        if (!cancelled && data.success && data.data?.spawn) setWorldSpawn(data.data.spawn)
-      })
-      .catch(() => {})
+    const headers = authHeaders(token)
+    apiFetch<WorldInfo>('/world', { headers }).then((r) => {
+      if (cancelled) return
+      if (r.kind === 'ok' && r.data?.spawn) setWorldSpawn(r.data.spawn)
+      else if (r.kind === 'unauthorized') logout()
+      // unsupported/error/network: no spawn data, the To-spawn button stays hidden
+    })
     return () => { cancelled = true }
-  }, [token])
+  }, [token, logout])
 
   // Subscribe to shared WebSocket for join/leave events
   useEffect(() => {

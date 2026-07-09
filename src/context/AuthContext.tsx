@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
+import { API_BASE } from '../lib/api'
 
 interface AuthContextType {
   token: string | null

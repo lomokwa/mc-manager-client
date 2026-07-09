@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Copy, Check, Plus, X } from 'lucide-react'
+import { apiFetch, authHeaders } from '../../lib/api'
 import type { User, Invitation } from '../../types/user'
-import type { APIResponse } from '../../types/player'
 import './Users.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
-
 function Users() {
-  const { token } = useAuth()
+  const { token, logout } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -16,28 +14,18 @@ function Users() {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-    'ngrok-skip-browser-warning': 'true',
-  }
+  const headers = authHeaders(token)
 
   useEffect(() => {
     let cancelled = false
 
-    fetch(`${API_BASE}/users`, { headers })
-      .then((res) => {
-        if (!res.ok) return { success: false }
-        return res.json()
-      })
-      .then((data: APIResponse<User[]>) => {
+    apiFetch<User[]>('/users', { headers })
+      .then((r) => {
         if (cancelled) return
-        if (data.success && data.data) {
-          setUsers(data.data)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError('Could not connect to server')
+        if (r.kind === 'ok') setUsers(r.data)
+        else if (r.kind === 'unauthorized') logout()
+        else if (r.kind === 'network') setError('Could not connect to server')
+        // other kinds: leave the list empty (matches the prior silent path)
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -49,22 +37,12 @@ function Users() {
   const createInvitation = async () => {
     setCreating(true)
     setError(null)
-    try {
-      const res = await fetch(`${API_BASE}/admin/invitations`, {
-        method: 'POST',
-        headers,
-      })
-      const data: APIResponse<Invitation> = await res.json()
-      if (data.success && data.data) {
-        setInviteLink(data.data.link)
-      } else {
-        setError(data.error ?? 'Failed to create invitation')
-      }
-    } catch {
-      setError('Could not connect to server')
-    } finally {
-      setCreating(false)
-    }
+    const r = await apiFetch<Invitation>('/admin/invitations', { method: 'POST', headers })
+    if (r.kind === 'ok') setInviteLink(r.data.link)
+    else if (r.kind === 'unauthorized') logout()
+    else if (r.kind === 'network') setError('Could not connect to server')
+    else setError(r.kind === 'error' ? r.message : 'Failed to create invitation')
+    setCreating(false)
   }
 
   const copyToClipboard = () => {
