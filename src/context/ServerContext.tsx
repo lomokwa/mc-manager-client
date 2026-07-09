@@ -15,6 +15,7 @@ export interface ServerInfo {
 
 interface ServerContextType {
   running: boolean
+  consoleConnected: boolean
   loading: boolean
   actionError: string | null
   serverExists: boolean
@@ -60,6 +61,12 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [chatLog, setChatLog] = useState<ChatLine[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Set<MessageListener>>(new Set())
+  // Reconnect bookkeeping. A dropped console can't be revived by setRunning
+  // alone — React bails out on same-value setState, so the connect effect
+  // never re-runs; bumping wsEpoch forces it. consoleConnected drives the UI.
+  const [consoleConnected, setConsoleConnected] = useState(false)
+  const [wsEpoch, setWsEpoch] = useState(0)
+  const reconnectRef = useRef<{ attempt: number; timer: number | null }>({ attempt: 0, timer: null })
 
   const appendLog = useCallback((line: string) => {
     setLogs((prev) => {
@@ -113,6 +120,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const connectWs = useCallback(() => {
     if (wsRef.current) return
+    // Show "reconnecting" until the handshake actually opens.
+    setConsoleConnected(false)
     const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token ?? '')}`)
     // Track the socket immediately, not in onopen: if it's only assigned
     // once the handshake finishes, a second connect started in the meantime
@@ -132,19 +141,38 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       }
       listenersRef.current.forEach((fn) => fn(e.data))
     }
+    ws.onopen = () => {
+      reconnectRef.current.attempt = 0
+      setConsoleConnected(true)
+    }
     ws.onclose = () => {
-      // Only clear the ref if it still points at this socket — a stale
-      // handler must not null out a newer connection.
-      if (wsRef.current === ws) wsRef.current = null
+      // A deliberate close (effect cleanup / server stop) nulls wsRef first, so
+      // if it no longer points at this socket the close was intentional — don't
+      // reconnect. Otherwise the socket dropped unexpectedly: reconnect.
+      if (wsRef.current !== ws) return
+      wsRef.current = null
+      setConsoleConnected(false)
       refreshStatus()
+      // Capped exponential backoff: 1s, 2s, 4s, … 30s max.
+      const attempt = reconnectRef.current.attempt++
+      const delay = Math.min(30_000, 1000 * 2 ** attempt)
+      reconnectRef.current.timer = window.setTimeout(() => {
+        reconnectRef.current.timer = null
+        setWsEpoch((e) => e + 1)
+      }, delay)
     }
     ws.onerror = () => {
-      if (wsRef.current === ws) wsRef.current = null
+      // The browser fires 'error' then 'close'; let onclose own teardown and
+      // the reconnect so the ref isn't nulled early (which reads as deliberate).
     }
   }, [token])
 
-  // Manage WebSocket lifecycle based on running state
+  // Manage the WebSocket lifecycle. wsEpoch is bumped by the reconnect timer so
+  // a dropped socket re-runs this effect and reconnects.
   useEffect(() => {
+    // Capture the (stable, never-reassigned) bookkeeping object so the cleanup
+    // reads the same instance without touching reconnectRef.current there.
+    const reconnect = reconnectRef.current
     if (running) {
       connectWs()
     } else {
@@ -152,10 +180,16 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       wsRef.current = null
     }
     return () => {
+      // Cancel any pending reconnect so a deliberate stop/unmount can't
+      // resurrect the socket against a stopped server.
+      if (reconnect.timer !== null) {
+        window.clearTimeout(reconnect.timer)
+        reconnect.timer = null
+      }
       wsRef.current?.close()
       wsRef.current = null
     }
-  }, [running, connectWs])
+  }, [running, wsEpoch, connectWs])
 
   const sendCommand = useCallback((cmd: string) => {
     // The ref is set while the socket is still connecting; send() on a
@@ -287,7 +321,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, actionError, serverExists, serverInfo, logs, chatLog, appendLog, clearLogs, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, consoleConnected, loading, actionError, serverExists, serverInfo, logs, chatLog, appendLog, clearLogs, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )

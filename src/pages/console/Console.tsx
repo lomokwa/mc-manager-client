@@ -5,7 +5,7 @@ import { getSuggestions, type Suggestion } from '../../lib/mcCommands'
 import './Console.css'
 
 function Console() {
-  const { running, logs, appendLog, clearLogs, sendCommand } = useServer()
+  const { running, consoleConnected, logs, appendLog, clearLogs, sendCommand } = useServer()
   const [command, setCommand] = useState('')
   const [filter, setFilter] = useState('')
   const [selIdx, setSelIdx] = useState(0)
@@ -132,6 +132,15 @@ function Console() {
           />
         </div>
         <span className="terminal-count">{filter ? `${filtered.length} / ${logs.length}` : logs.length} lines</span>
+        {running && (
+          <span
+            className={`term-conn ${consoleConnected ? 'is-live' : 'is-down'}`}
+            title={consoleConnected ? 'Console connected' : 'Reconnecting to the console…'}
+          >
+            <span className="term-conn-dot" />
+            {consoleConnected ? 'Live' : 'Reconnecting…'}
+          </span>
+        )}
         <button type="button" className="terminal-tool" onClick={downloadLogs} disabled={!logs.length} title="Download logs" aria-label="Download logs">
           <Download size={15} />
         </button>
