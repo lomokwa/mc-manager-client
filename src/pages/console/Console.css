@@ -47,6 +47,47 @@
   white-space: nowrap;
 }
 
+/* Console connection badge — Live while the WebSocket is open, Reconnecting
+   (pulsing) while it's dropped and backing off. */
+.term-conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.term-conn-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+}
+.term-conn.is-live {
+  color: var(--brand);
+  background: rgba(78, 204, 163, 0.12);
+}
+.term-conn.is-live .term-conn-dot {
+  background: var(--brand);
+}
+.term-conn.is-down {
+  color: #f0b849;
+  background: rgba(240, 184, 73, 0.12);
+}
+.term-conn.is-down .term-conn-dot {
+  background: #f0b849;
+  animation: term-conn-pulse 1.1s ease-in-out infinite;
+}
+@keyframes term-conn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.28; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .term-conn.is-down .term-conn-dot { animation: none; }
+}
+
 .terminal-tool {
   display: inline-flex;
   align-items: center;
