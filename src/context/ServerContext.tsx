@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { isChatLine, type ChatLine } from '../lib/chat'
+import { apiFetch, authHeaders } from '../lib/api'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
 
 type MessageListener = (data: string) => void
@@ -77,45 +77,30 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const clearLogs = useCallback(() => setLogs([]), [])
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-    'ngrok-skip-browser-warning': 'true',
-  }
+  const headers = authHeaders(token)
 
   const refreshStatus = () => {
-    fetch(`${API_BASE}/status`, { headers })
-      .then((res) => {
-        if (res.status === 401) { logout(); return }
-        return res.json()
-      })
-      .then((data) => {
-        if (data?.success) setRunning(data.data.running)
-      })
-      .catch(() => {})
+    apiFetch<{ running: boolean }>('/status', { headers }).then((r) => {
+      if (r.kind === 'unauthorized') logout()
+      else if (r.kind === 'ok') setRunning(r.data.running)
+    })
   }
 
   const refreshServerExists = () => {
-    fetch(`${API_BASE}/server`, { headers })
-      .then((res) => {
-        if (res.status === 401) { logout(); return }
-        return res.json()
-      })
-      .then((data) => {
-        if (data?.success) {
-          setServerExists(data.data.exists)
-          if (data.data.exists && data.data.serverType) {
-            setServerInfo({
-              serverType: data.data.serverType,
-              gameVersion: data.data.gameVersion,
-              loaderVersion: data.data.loaderVersion,
-            })
-          } else {
-            setServerInfo(null)
-          }
-        }
-      })
-      .catch(() => {})
+    apiFetch<{ exists: boolean; serverType?: string; gameVersion?: string; loaderVersion?: string }>('/server', { headers }).then((r) => {
+      if (r.kind === 'unauthorized') { logout(); return }
+      if (r.kind !== 'ok') return
+      setServerExists(r.data.exists)
+      if (r.data.exists && r.data.serverType) {
+        setServerInfo({
+          serverType: r.data.serverType,
+          gameVersion: r.data.gameVersion ?? '',
+          loaderVersion: r.data.loaderVersion,
+        })
+      } else {
+        setServerInfo(null)
+      }
+    })
   }
 
   const connectWs = useCallback(() => {
@@ -217,56 +202,32 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const handleStart = async () => {
     setLoading(true)
     setActionError(null)
-    try {
-      const res = await fetch(`${API_BASE}/start`, {
-        method: 'POST',
-        headers,
-      })
-      const data = await res.json()
-      if (data.success) {
-        setRunning(true)
-      } else {
-        setActionError(data.error || 'Failed to start the server')
-      }
-    } catch {
-      setActionError('Could not reach the server')
-    } finally {
-      setLoading(false)
-    }
+    const r = await apiFetch('/start', { method: 'POST', headers })
+    if (r.kind === 'ok') setRunning(true)
+    else if (r.kind === 'unauthorized') logout()
+    else if (r.kind === 'network') setActionError('Could not reach the server')
+    else setActionError(r.kind === 'error' ? r.message : 'Failed to start the server')
+    setLoading(false)
   }
 
   const handleStop = async () => {
     setLoading(true)
     setActionError(null)
-    try {
-      const res = await fetch(`${API_BASE}/stop`, {
-        method: 'POST',
-        headers,
-      })
-      const data = await res.json()
-      if (data.success) {
-        setRunning(false)
-      } else {
-        setActionError(data.error || 'Failed to stop the server')
-      }
-    } catch {
-      setActionError('Could not reach the server')
-    } finally {
-      setLoading(false)
-    }
+    const r = await apiFetch('/stop', { method: 'POST', headers })
+    if (r.kind === 'ok') setRunning(false)
+    else if (r.kind === 'unauthorized') logout()
+    else if (r.kind === 'network') setActionError('Could not reach the server')
+    else setActionError(r.kind === 'error' ? r.message : 'Failed to stop the server')
+    setLoading(false)
   }
 
   const createServer = async (config: CreateServerConfig) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/server`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(config),
-      })
-      const data = await res.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create server')
+      const r = await apiFetch('/server', { method: 'POST', headers, body: JSON.stringify(config) })
+      if (r.kind === 'unauthorized') { logout(); throw new Error('Session expired') }
+      if (r.kind !== 'ok') {
+        throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to create server')
       }
       setServerExists(true)
       setServerInfo({
@@ -282,13 +243,10 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const deleteServer = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/server`, {
-        method: 'DELETE',
-        headers,
-      })
-      const data = await res.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to delete server')
+      const r = await apiFetch('/server', { method: 'DELETE', headers })
+      if (r.kind === 'unauthorized') { logout(); throw new Error('Session expired') }
+      if (r.kind !== 'ok') {
+        throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to delete server')
       }
       setServerExists(false)
       setServerInfo(null)
@@ -298,26 +256,20 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   const updateProperties = async (properties: Record<string, string>) => {
-    const res = await fetch(`${API_BASE}/properties`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ properties }),
-    })
-    if (res.status === 401) { logout(); return }
-    const data = await res.json()
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to update properties')
+    const r = await apiFetch('/properties', { method: 'PATCH', headers, body: JSON.stringify({ properties }) })
+    if (r.kind === 'unauthorized') { logout(); return }
+    if (r.kind !== 'ok') {
+      throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to update properties')
     }
   }
 
   const fetchProperties = async (): Promise<Record<string, string>> => {
-    const res = await fetch(`${API_BASE}/properties`, { headers })
-    if (res.status === 401) { logout(); return {} }
-    const data = await res.json()
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch properties')
+    const r = await apiFetch<Record<string, string>>('/properties', { headers })
+    if (r.kind === 'unauthorized') { logout(); return {} }
+    if (r.kind !== 'ok') {
+      throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to fetch properties')
     }
-    return data.data
+    return r.data
   }
 
   return (

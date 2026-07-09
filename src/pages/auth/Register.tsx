@@ -1,9 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { API_BASE } from '../../lib/api'
 import './Auth.css'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 
 function Register() {
   const { register } = useAuth()
