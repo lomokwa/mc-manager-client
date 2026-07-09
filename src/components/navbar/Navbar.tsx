@@ -2,12 +2,17 @@ import { useServer } from '../../context/ServerContext'
 import './Navbar.css'
 
 function Navbar() {
-  const { running, loading, handleStart, handleStop } = useServer()
+  const { running, loading, actionError, handleStart, handleStop } = useServer()
 
   return (
     <header className="header">
       <h1>MC Manager</h1>
       <div className="controls">
+        {actionError && (
+          <span className="action-error" role="alert" title={actionError}>
+            {actionError}
+          </span>
+        )}
         <span className={`status-dot ${running ? 'online' : 'offline'}`} />
         <span className="status-text">{running ? 'Running' : 'Stopped'}</span>
         {running ? (

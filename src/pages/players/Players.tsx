@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
-import type { Player, APIResponse } from '../../types/player'
+import PlayerPanel from '../../components/player/PlayerPanel'
+import type { Player, WorldInfo, APIResponse } from '../../types/player'
 import './Players.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
@@ -14,6 +16,8 @@ function Players() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null)
+  const [worldSpawn, setWorldSpawn] = useState<{ x: number; y: number; z: number } | undefined>()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [fetchTrigger, setFetchTrigger] = useState(0)
 
@@ -32,6 +36,7 @@ function Players() {
             return a.name.localeCompare(b.name)
           })
           setPlayers(sorted)
+          setError(null) // recover from a prior transient error on refetch
         } else {
           setError(data.error ?? 'Failed to fetch players')
         }
@@ -45,6 +50,19 @@ function Players() {
 
     return () => { cancelled = true }
   }, [token, fetchTrigger])
+
+  // World spawn (for "teleport to spawn"). Optional — degrades if unavailable.
+  useEffect(() => {
+    let cancelled = false
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
+    fetch(`${API_BASE}/world`, { headers })
+      .then((res) => res.json())
+      .then((data: APIResponse<WorldInfo>) => {
+        if (!cancelled && data.success && data.data?.spawn) setWorldSpawn(data.data.spawn)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [token])
 
   // Subscribe to shared WebSocket for join/leave events
   useEffect(() => {
@@ -65,46 +83,86 @@ function Players() {
     }
   }, [running, subscribe])
 
+  const selected = selectedUuid ? players.find((p) => p.uuid === selectedUuid) ?? null : null
+  const onlinePlayers = players.filter((p) => p.online)
+
+  const closePanel = useCallback(() => setSelectedUuid(null), [])
+  const refreshRoster = useCallback(() => setFetchTrigger((n) => n + 1), [])
+
   return (
-    <div className="players-page">
-      <div className="players-header">
-        <h2>Players</h2>
+    <>
+      <div className="players-page">
+        <div className="players-header">
+          <h2>Players</h2>
+          <button
+            className="btn-refresh"
+            onClick={refreshRoster}
+            disabled={loading}
+            aria-label="Refresh players"
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            Refresh
+          </button>
+        </div>
+
+        {loading && <p className="players-loading">Loading players…</p>}
+        {error && <p className="players-error">{error}</p>}
+
+        {!loading && !error && players.length === 0 && (
+          <div className="players-empty">
+            <p className="players-empty-title">No players yet</p>
+            <p className="players-empty-sub">
+              Once someone joins the server they'll show up here — select any player to op, teleport,
+              message, or moderate them.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && players.length > 0 && (
+          <div className="players-list">
+            {players.map((player, i) => (
+              <button
+                key={player.uuid}
+                type="button"
+                className={`player-card stagger-item ${player.online ? 'online' : 'offline'} ${selectedUuid === player.uuid ? 'selected' : ''}`}
+                style={{ '--i': Math.min(i, 12) } as React.CSSProperties}
+                onClick={() => setSelectedUuid(player.uuid)}
+                aria-haspopup="dialog"
+              >
+                <span className="player-status-indicator" title={player.online ? 'Online' : 'Offline'} />
+                <img
+                  className="player-avatar"
+                  src={`https://mc-heads.net/avatar/${player.uuid}/64`}
+                  alt=""
+                  aria-hidden="true"
+                />
+                <div className="player-info">
+                  <span className="player-name">{player.name}</span>
+                  <div className="player-badges">
+                    {player.is_op && <span className="badge badge-op">OP</span>}
+                    {player.is_banned && <span className="badge badge-banned">Banned</span>}
+                    {player.is_whitelisted && <span className="badge badge-whitelisted">Whitelisted</span>}
+                  </div>
+                </div>
+                <span className="player-status-text">{player.online ? 'Online' : 'Offline'}</span>
+                <ChevronRight size={16} className="player-chevron" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {loading && <p className="players-loading">Loading players...</p>}
-      {error && <p className="players-error">{error}</p>}
-
-      {!loading && !error && players.length === 0 && (
-        <p className="players-empty">No players have joined this server yet.</p>
+      {selected && (
+        <PlayerPanel
+          key={selected.uuid}
+          player={selected}
+          onlinePlayers={onlinePlayers}
+          worldSpawn={worldSpawn}
+          onClose={closePanel}
+          onRefresh={refreshRoster}
+        />
       )}
-
-      {!loading && !error && players.length > 0 && (
-        <div className="players-list">
-          {players.map((player) => (
-            <div
-              key={player.uuid}
-              className={`player-card ${player.online ? 'online' : 'offline'}`}
-            >
-              <div className="player-status-indicator" title={player.online ? 'Online' : 'Offline'} />
-              <img
-                className="player-avatar"
-                src={`https://mc-heads.net/avatar/${player.uuid}/64`}
-                alt={player.name}
-              />
-              <div className="player-info">
-                <span className="player-name">{player.name}</span>
-                <div className="player-badges">
-                  {player.is_op && <span className="badge badge-op">OP</span>}
-                  {player.is_banned && <span className="badge badge-banned">Banned</span>}
-                  {player.is_whitelisted && <span className="badge badge-whitelisted">Whitelisted</span>}
-                </div>
-              </div>
-              <span className="player-status-text">{player.online ? 'Online' : 'Offline'}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </>
   )
 }
 

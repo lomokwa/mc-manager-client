@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
+import { isChatLine, type ChatLine } from '../lib/chat'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
@@ -15,10 +16,13 @@ export interface ServerInfo {
 interface ServerContextType {
   running: boolean
   loading: boolean
+  actionError: string | null
   serverExists: boolean
   serverInfo: ServerInfo | null
   logs: string[]
+  chatLog: ChatLine[]
   appendLog: (line: string) => void
+  clearLogs: () => void
   handleStart: () => Promise<void>
   handleStop: () => Promise<void>
   createServer: (config: CreateServerConfig) => Promise<void>
@@ -41,14 +45,19 @@ export interface CreateServerConfig {
 const ServerContext = createContext<ServerContextType | null>(null)
 
 const MAX_LOG_LINES = 1000
+// Chat gets its own, larger buffer so a player's history survives even a busy
+// console (chat lines are only a fraction of total server output).
+const MAX_CHAT_LINES = 2000
 
 export function ServerProvider({ children }: { children: ReactNode }) {
   const { token, logout } = useAuth()
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [serverExists, setServerExists] = useState(false)
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [chatLog, setChatLog] = useState<ChatLine[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const listenersRef = useRef<Set<MessageListener>>(new Set())
 
@@ -58,6 +67,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next
     })
   }, [])
+
+  const clearLogs = useCallback(() => setLogs([]), [])
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -103,19 +114,32 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const connectWs = useCallback(() => {
     if (wsRef.current) return
     const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token ?? '')}`)
-    ws.onopen = () => {
-      wsRef.current = ws
-    }
+    // Track the socket immediately, not in onopen: if it's only assigned
+    // once the handshake finishes, a second connect started in the meantime
+    // creates a duplicate socket, and cleanup can't close a socket it never
+    // saw (it leaks and keeps streaming into the log state).
+    wsRef.current = ws
     ws.onmessage = (e) => {
       appendLog(e.data)
+      // Keep chat lines in their own long-lived buffer, tagged with a
+      // monotonic seq so each message has a stable identity across rolls.
+      if (isChatLine(e.data)) {
+        setChatLog((prev) => {
+          const seq = prev.length ? prev[prev.length - 1].seq + 1 : 0
+          const next = [...prev, { seq, line: e.data }]
+          return next.length > MAX_CHAT_LINES ? next.slice(-MAX_CHAT_LINES) : next
+        })
+      }
       listenersRef.current.forEach((fn) => fn(e.data))
     }
     ws.onclose = () => {
-      wsRef.current = null
+      // Only clear the ref if it still points at this socket — a stale
+      // handler must not null out a newer connection.
+      if (wsRef.current === ws) wsRef.current = null
       refreshStatus()
     }
     ws.onerror = () => {
-      wsRef.current = null
+      if (wsRef.current === ws) wsRef.current = null
     }
   }, [token])
 
@@ -134,7 +158,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, [running, connectWs])
 
   const sendCommand = useCallback((cmd: string) => {
-    wsRef.current?.send(cmd)
+    // The ref is set while the socket is still connecting; send() on a
+    // CONNECTING socket throws, so only send once it's open.
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(cmd)
+    }
   }, [])
 
   const subscribe = useCallback((listener: MessageListener) => {
@@ -145,10 +173,16 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshStatus()
     refreshServerExists()
+    // Keep the running state honest even when nothing reconnects the
+    // WebSocket (e.g. the server was started/stopped from another session
+    // or crashed silently).
+    const id = setInterval(refreshStatus, 5000)
+    return () => clearInterval(id)
   }, [])
 
   const handleStart = async () => {
     setLoading(true)
+    setActionError(null)
     try {
       const res = await fetch(`${API_BASE}/start`, {
         method: 'POST',
@@ -157,9 +191,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(true)
+      } else {
+        setActionError(data.error || 'Failed to start the server')
       }
     } catch {
-      // handled by consumers
+      setActionError('Could not reach the server')
     } finally {
       setLoading(false)
     }
@@ -167,6 +203,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const handleStop = async () => {
     setLoading(true)
+    setActionError(null)
     try {
       const res = await fetch(`${API_BASE}/stop`, {
         method: 'POST',
@@ -175,9 +212,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.success) {
         setRunning(false)
+      } else {
+        setActionError(data.error || 'Failed to stop the server')
       }
     } catch {
-      // handled by consumers
+      setActionError('Could not reach the server')
     } finally {
       setLoading(false)
     }
@@ -248,12 +287,13 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ServerContext.Provider value={{ running, loading, serverExists, serverInfo, logs, appendLog, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
+    <ServerContext.Provider value={{ running, loading, actionError, serverExists, serverInfo, logs, chatLog, appendLog, clearLogs, handleStart, handleStop, createServer, deleteServer, updateProperties, fetchProperties, sendCommand, subscribe }}>
       {children}
     </ServerContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useServer() {
   const context = useContext(ServerContext)
   if (!context) throw new Error('useServer must be used within ServerProvider')

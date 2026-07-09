@@ -6,9 +6,13 @@ import Console from './pages/console/Console'
 import Players from './pages/players/Players'
 import ServerSetup from './pages/server/ServerSetup'
 import Users from './pages/users/Users'
+import Files from './pages/files/Files'
+import Backups from './pages/backups/Backups'
+import Settings from './pages/settings/Settings'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import { ServerProvider } from './context/ServerContext'
+import { ToastProvider } from './components/toast/ToastContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,18 +33,23 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ServerProvider>
-              <div className="app">
-                <Sidebar />
-                <div className="main-content">
-                  <Navbar />
-                  <Routes>
-                    <Route path="/" element={<Console />} />
-                    <Route path="/players" element={<Players />} />
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/server" element={<ServerSetup />} />
-                  </Routes>
+              <ToastProvider>
+                <div className="app">
+                  <Sidebar />
+                  <div className="main-content">
+                    <Navbar />
+                    <Routes>
+                      <Route path="/" element={<Console />} />
+                      <Route path="/players" element={<Players />} />
+                      <Route path="/users" element={<Users />} />
+                      <Route path="/server" element={<ServerSetup />} />
+                      <Route path="/files" element={<Files />} />
+                      <Route path="/backups" element={<Backups />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </ToastProvider>
             </ServerProvider>
           </ProtectedRoute>
         }
