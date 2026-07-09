@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react'
-import { highlightJson, highlightPlain, type Language } from '../../lib/jsonHighlight'
+import { highlightJson, highlightPlain, highlightProperties, type Language } from '../../lib/jsonHighlight'
 import './CodeEditor.css'
 
 interface CodeEditorProps {
@@ -19,10 +19,11 @@ function CodeEditor({ value, onChange, language, ariaLabel }: CodeEditorProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const gutterRef = useRef<HTMLPreElement>(null)
 
-  const html = useMemo(
-    () => (language === 'json' ? highlightJson(value) : highlightPlain(value)),
-    [value, language],
-  )
+  const html = useMemo(() => {
+    if (language === 'json') return highlightJson(value)
+    if (language === 'properties') return highlightProperties(value)
+    return highlightPlain(value)
+  }, [value, language])
   // Append a space to a trailing empty line so the <pre> renders it at the
   // same height the <textarea> does (keeps the last line + gutter aligned).
   const preHtml = value.endsWith('\n') ? `${html} ` : html

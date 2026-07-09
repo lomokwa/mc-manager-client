@@ -87,3 +87,9 @@
 .j-bool { color: #c48fff; }
 .j-null { color: #c48fff; }
 .j-punc { color: #8390b4; }
+
+/* .properties token colours */
+.p-key { color: #5fd6b0; }
+.p-eq { color: #8390b4; }
+.p-val { color: #e0a86a; }
+.p-comment { color: #6b7590; font-style: italic; }

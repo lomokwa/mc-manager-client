@@ -37,11 +37,38 @@ export function highlightPlain(code: string): string {
   return escapeHtml(code)
 }
 
-export type Language = 'json' | 'text'
+/**
+ * Highlight a `.properties` file: line-oriented `key=value` (or `key:value`),
+ * with `#`/`!` comments. Keys are coloured, the separator dimmed, values
+ * warm. Processed line-by-line so it stays cheap.
+ */
+export function highlightProperties(code: string): string {
+  if (code.length > HIGHLIGHT_LIMIT) return escapeHtml(code)
+  return escapeHtml(code)
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trimStart()
+      if (trimmed.startsWith('#') || trimmed.startsWith('!')) {
+        return `<span class="p-comment">${line}</span>`
+      }
+      const sep = line.search(/[=:]/)
+      if (sep === -1) return line
+      return (
+        `<span class="p-key">${line.slice(0, sep)}</span>` +
+        `<span class="p-eq">${line[sep]}</span>` +
+        `<span class="p-val">${line.slice(sep + 1)}</span>`
+      )
+    })
+    .join('\n')
+}
+
+export type Language = 'json' | 'properties' | 'text'
 
 /** Pick a language from a file name. */
 export function languageFor(name: string): Language {
-  return /\.json$/i.test(name) ? 'json' : 'text'
+  if (/\.json$/i.test(name)) return 'json'
+  if (/\.properties$/i.test(name)) return 'properties'
+  return 'text'
 }
 
 export interface JsonCheck {

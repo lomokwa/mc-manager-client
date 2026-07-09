@@ -75,8 +75,18 @@ export function directMessageCommand(player: string, message: string, color: Tel
   if (!VALID_NAME.test(player)) return null
   const msg = sanitizeText(message)
   if (!msg) return null
-  // A styled "[Server]" prefix followed by the message, as a JSON text
-  // component. JSON.stringify escapes the message safely.
-  const component = ['', { text: '[Server] ', color: 'gold', bold: true }, { text: msg, color }]
+  // A private whisper only <player> sees (tellraw is addressed to their name):
+  // a "[Server → you]" prefix — grey brackets, bold gold sender — then the
+  // message in the chosen colour, italicised like a vanilla /msg. JSON.stringify
+  // escapes the message content safely.
+  const component = [
+    '',
+    { text: '[', color: 'gray' },
+    { text: 'Server', color: 'gold', bold: true },
+    { text: ' → ', color: 'gray' },
+    { text: 'you', color: 'yellow' },
+    { text: '] ', color: 'gray' },
+    { text: msg, color, italic: true },
+  ]
   return `tellraw ${player} ${JSON.stringify(component)}`
 }

@@ -220,7 +220,7 @@ function Files() {
                 <span className="fe-bad"><span className="fe-dot" />Invalid JSON{jsonState.line ? ` · line ${jsonState.line}` : ''}</span>
               )
             ) : (
-              <span className="fe-muted">Plain text</span>
+              <span className="fe-muted">{lang === 'properties' ? 'Properties' : 'Plain text'}</span>
             )}
             <span className="fe-meta">{lineCount} lines · {editing.content.length.toLocaleString()} chars</span>
           </div>
