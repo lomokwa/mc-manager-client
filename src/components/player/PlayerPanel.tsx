@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Shield, ShieldOff, ListChecks, MapPin, Home, Send, Terminal,
   Ban, UserX, Undo2, Map as MapIcon, Clock, Skull, LogIn,
@@ -13,7 +13,18 @@ import {
 } from '../../lib/playerCommands'
 import { formatPlaytime, formatSessionLength } from '../../lib/playtime'
 import { useBlueMapUrl } from '../../lib/settings'
+import { parsePlayerChat } from '../../lib/chat'
 import './PlayerPanel.css'
+
+// One entry in the panel's live conversation: a message the player sent
+// (parsed from the console) or a DM the admin sent this session.
+interface ChatEntry {
+  key: string
+  from: 'them' | 'me'
+  text: string
+  time?: string
+  sort: number
+}
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -30,10 +41,11 @@ interface PlayerPanelProps {
 type ConfirmKind = 'kick' | 'ban' | 'ipban' | null
 
 function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: PlayerPanelProps) {
-  const { running, sendCommand } = useServer()
+  const { running, sendCommand, logs } = useServer()
   const { toast } = useToast()
   const bluemapUrl = useBlueMapUrl()
   const panelRef = useRef<HTMLDivElement>(null)
+  const chatRef = useRef<HTMLDivElement>(null)
 
   const [closing, setClosing] = useState(false)
   const [reason, setReason] = useState('')
@@ -50,6 +62,28 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
     const id = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(id)
   }, [])
+
+  // DMs sent from this panel session, tracked locally (tellraw is private, so
+  // it isn't echoed to the console) so the conversation reads two-way.
+  const [sentDms, setSentDms] = useState<{ seq: number; text: string; at: number }[]>([])
+
+  // Live conversation: the player's chat parsed from the console log (updates
+  // as new lines stream in over the WebSocket) interleaved with our DMs.
+  const conversation = useMemo<ChatEntry[]>(() => {
+    const them = parsePlayerChat(logs, player.name).map<ChatEntry>((m) => ({
+      key: `t${m.id}`, from: 'them', text: m.text, time: m.time, sort: m.id,
+    }))
+    const me = sentDms.map<ChatEntry>((d) => ({
+      key: `m${d.seq}`, from: 'me', text: d.text, sort: d.at + 0.5,
+    }))
+    return [...them, ...me].sort((a, b) => a.sort - b.sort)
+  }, [logs, player.name, sentDms])
+
+  // Keep the chat scrolled to the newest message.
+  useEffect(() => {
+    const el = chatRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [conversation])
 
   const online = player.online
   const canAct = running // console WebSocket is only live while the server runs
@@ -154,6 +188,14 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
     sessionText !== null
 
   const tpTargets = onlinePlayers.filter((p) => p.name !== player.name)
+
+  const sendDm = () => {
+    const text = message.trim()
+    if (!text) return
+    dispatch(directMessageCommand(player.name, message, msgColor), `Message sent to ${player.name}`)
+    setSentDms((s) => [...s, { seq: s.length, text, at: logs.length }])
+    setMessage('')
+  }
 
   return (
     <div className={`pp-root ${closing ? 'closing' : ''}`}>
@@ -367,17 +409,37 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
             </div>
           </section>
 
-          {/* Message */}
+          {/* Chat */}
           <section className="pp-section">
-            <h3 className="pp-section-title">Message</h3>
-            {!online && <p className="pp-hint">{player.name} is offline.</p>}
+            <h3 className="pp-section-title">Chat</h3>
+            {conversation.length > 0 ? (
+              <div className="pp-chat" ref={chatRef}>
+                {conversation.map((m) => (
+                  <div key={m.key} className={`pp-bubble pp-bubble-${m.from}`}>
+                    <span className="pp-bubble-text">{m.text}</span>
+                    {m.time && <span className="pp-bubble-time">{m.time}</span>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="pp-chat-empty">
+                No recent chat from {player.name}. Their messages appear here live as they talk.
+              </p>
+            )}
+            {!online && <p className="pp-hint">{player.name} is offline — you can still read past messages.</p>}
             <textarea
               className="pp-input pp-textarea"
-              placeholder={`Send a private message to ${player.name}…`}
+              placeholder={`Message ${player.name} privately…`}
               rows={2}
               value={message}
               disabled={!canAct || !online}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && canAct && online && message.trim()) {
+                  e.preventDefault()
+                  sendDm()
+                }
+              }}
             />
             <div className="pp-inline-form">
               <select
@@ -396,13 +458,7 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
               <button
                 className="pp-btn pp-btn-primary"
                 disabled={!canAct || !online || !message.trim()}
-                onClick={() => {
-                  dispatch(
-                    directMessageCommand(player.name, message, msgColor),
-                    `Message sent to ${player.name}`,
-                  )
-                  setMessage('')
-                }}
+                onClick={sendDm}
               >
                 <Send size={15} />
                 Send

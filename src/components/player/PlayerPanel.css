@@ -461,6 +461,80 @@
   min-height: 2.4rem;
   line-height: 1.4;
 }
+
+/* Live chat conversation */
+.pp-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+  background: var(--pp-inset);
+  border: 1px solid var(--pp-line);
+  border-radius: 10px;
+}
+
+.pp-bubble {
+  max-width: 82%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0.38rem 0.6rem;
+  border-radius: 11px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  word-break: break-word;
+  animation: pp-bubble-in 0.2s var(--pp-ease) both;
+}
+
+@keyframes pp-bubble-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.pp-bubble-them {
+  align-self: flex-start;
+  background: var(--pp-surface-2);
+  border-bottom-left-radius: 3px;
+  color: var(--pp-text);
+}
+
+.pp-bubble-me {
+  align-self: flex-end;
+  background: var(--pp-brand-soft);
+  border-bottom-right-radius: 3px;
+  color: #d7f5ea;
+}
+
+.pp-bubble-text {
+  white-space: pre-wrap;
+}
+
+.pp-bubble-time {
+  align-self: flex-end;
+  font-size: 0.62rem;
+  color: var(--pp-dim);
+}
+
+.pp-chat-empty {
+  margin: 0 0 0.6rem;
+  padding: 0.7rem;
+  text-align: center;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--pp-dim);
+  background: var(--pp-inset);
+  border: 1px dashed var(--pp-line-2);
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-bubble {
+    animation: none;
+  }
+}
 .pp-select {
   flex: 1;
   cursor: pointer;
