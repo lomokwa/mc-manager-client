@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Folder, FileText, ChevronRight, ArrowUp, RefreshCw, Upload, Download, Save, X,
+  Folder, FileText, ChevronRight, ArrowUp, RefreshCw, Upload, Download, Save, X, Braces,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
 import { API_BASE, authHeaders } from '../../lib/api'
 import { formatBytes } from '../../lib/format'
+import { languageFor, checkJson } from '../../lib/jsonHighlight'
+import CodeEditor from '../../components/editor/CodeEditor'
 import './Files.css'
 
 interface FileEntry {
@@ -94,6 +96,14 @@ function Files() {
 
   const saveFile = async () => {
     if (!editing) return
+    // Never upload broken JSON over a working config.
+    if (languageFor(editing.name) === 'json') {
+      const check = checkJson(editing.content)
+      if (!check.ok) {
+        toast(`Won't save invalid JSON${check.line ? ` (line ${check.line})` : ''} — fix it first`, 'error')
+        return
+      }
+    }
     setSaving(true)
     try {
       const res = await fetch(`${API_BASE}/files?path=${encodeURIComponent(editing.path)}`, {
@@ -159,6 +169,19 @@ function Files() {
   const crumbs = path ? path.split('/') : []
 
   if (editing) {
+    const lang = languageFor(editing.name)
+    const jsonState = lang === 'json' ? checkJson(editing.content) : null
+    const lineCount = editing.content ? editing.content.split('\n').length : 0
+    const formatJson = () => {
+      try {
+        const pretty = JSON.stringify(JSON.parse(editing.content), null, 2)
+        setEditing((cur) => (cur ? { ...cur, content: pretty } : cur))
+        setDirty(true)
+        toast('Formatted', 'success')
+      } catch {
+        toast("Can't format — the JSON isn't valid yet", 'error')
+      }
+    }
     return (
       <div className="files-page">
         <div className="file-editor">
@@ -166,6 +189,12 @@ function Files() {
             <FileText size={16} className="file-editor-icon" />
             <span className="file-editor-name">{editing.path}</span>
             {dirty && <span className="file-editor-dirty" title="Unsaved changes">●</span>}
+            {lang === 'json' && (
+              <button className="fbtn fbtn-ghost" onClick={formatJson} title="Format JSON">
+                <Braces size={15} />
+                Format
+              </button>
+            )}
             <button className="fbtn" onClick={saveFile} disabled={!dirty || saving}>
               <Save size={15} />
               {saving ? 'Saving…' : 'Save'}
@@ -174,15 +203,27 @@ function Files() {
               <X size={15} />
             </button>
           </div>
-          <textarea
-            className="file-editor-area"
+          <CodeEditor
             value={editing.content}
-            spellCheck={false}
-            onChange={(e) => {
-              setEditing((cur) => (cur ? { ...cur, content: e.target.value } : cur))
+            language={lang}
+            ariaLabel={`Editing ${editing.name}`}
+            onChange={(content) => {
+              setEditing((cur) => (cur ? { ...cur, content } : cur))
               setDirty(true)
             }}
           />
+          <div className="file-editor-status">
+            {jsonState ? (
+              jsonState.ok ? (
+                <span className="fe-ok"><span className="fe-dot" />Valid JSON</span>
+              ) : (
+                <span className="fe-bad"><span className="fe-dot" />Invalid JSON{jsonState.line ? ` · line ${jsonState.line}` : ''}</span>
+              )
+            ) : (
+              <span className="fe-muted">Plain text</span>
+            )}
+            <span className="fe-meta">{lineCount} lines · {editing.content.length.toLocaleString()} chars</span>
+          </div>
         </div>
       </div>
     )

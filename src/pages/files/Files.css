@@ -247,19 +247,42 @@
   line-height: 1;
 }
 
-.file-editor-area {
+.file-editor .ce {
   flex: 1;
   min-height: 0;
-  resize: none;
-  padding: 1rem;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--text);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  tab-size: 2;
+}
+
+.file-editor-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0.85rem;
+  border-top: 1px solid var(--line-soft);
+  background: rgba(22, 33, 62, 0.4);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+.fe-ok,
+.fe-bad,
+.fe-muted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.fe-ok { color: var(--ok); }
+.fe-bad { color: var(--danger); }
+.fe-muted { color: var(--text-dim); }
+.fe-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.fe-meta {
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
