@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
-import { API_BASE, authHeaders } from '../../lib/api'
+import { API_BASE, authHeaders, apiFetch } from '../../lib/api'
 import { formatBytes } from '../../lib/format'
 import { languageFor, checkJson } from '../../lib/jsonHighlight'
 import CodeEditor from '../../components/editor/CodeEditor'
@@ -29,7 +29,7 @@ function parentPath(path: string): string {
 }
 
 function Files() {
-  const { token } = useAuth()
+  const { token, logout } = useAuth()
   const { toast } = useToast()
   const [path, setPath] = useState('')
   const [entries, setEntries] = useState<FileEntry[]>([])
@@ -39,28 +39,35 @@ function Files() {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [reload, setReload] = useState(0)
+  const [unsupported, setUnsupported] = useState(false)
   const uploadRef = useRef<HTMLInputElement>(null)
 
   const headers = authHeaders(token)
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/files?path=${encodeURIComponent(path)}`, { headers })
-      .then((r) => r.json())
-      .then((data: APIResponse<FileEntry[]>) => {
+    apiFetch<FileEntry[]>(`/files?path=${encodeURIComponent(path)}`, { headers })
+      .then((r) => {
         if (cancelled) return
-        if (data.success && data.data) {
-          const sorted = [...data.data].sort((a, b) => {
+        if (r.kind === 'ok') {
+          const sorted = [...r.data].sort((a, b) => {
             if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
             return a.name.localeCompare(b.name)
           })
           setEntries(sorted)
           setError(null)
+          setUnsupported(false)
+        } else if (r.kind === 'unsupported') {
+          setUnsupported(true)
+          setError(null)
+        } else if (r.kind === 'unauthorized') {
+          logout()
+        } else if (r.kind === 'network') {
+          setError('Could not reach the server')
         } else {
-          setError(data.error ?? 'Failed to list files')
+          setError(r.message)
         }
       })
-      .catch(() => !cancelled && setError('Could not reach the server'))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
@@ -77,17 +84,18 @@ function Files() {
         return
       }
       const filePath = joinPath(entry.name)
-      try {
-        const res = await fetch(`${API_BASE}/files/read?path=${encodeURIComponent(filePath)}`, { headers })
-        const data: APIResponse<string> = await res.json()
-        if (data.success && typeof data.data === 'string') {
-          setEditing({ name: entry.name, path: filePath, content: data.data })
-          setDirty(false)
-        } else {
-          toast(data.error ?? 'That file can’t be opened as text — try downloading it', 'error')
-        }
-      } catch {
+      const r = await apiFetch<string>(`/files/read?path=${encodeURIComponent(filePath)}`, { headers })
+      if (r.kind === 'ok') {
+        setEditing({ name: entry.name, path: filePath, content: r.data ?? '' })
+        setDirty(false)
+      } else if (r.kind === 'unauthorized') {
+        logout()
+      } else if (r.kind === 'unsupported') {
+        toast('This server build doesn’t support the file API', 'error')
+      } else if (r.kind === 'network') {
         toast('Could not read the file', 'error')
+      } else {
+        toast(r.message || 'That file can’t be opened as text — try downloading it', 'error')
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,30 +113,35 @@ function Files() {
       }
     }
     setSaving(true)
-    try {
-      const res = await fetch(`${API_BASE}/files?path=${encodeURIComponent(editing.path)}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ content: editing.content }),
-      })
-      const data: APIResponse = await res.json()
-      if (data.success) {
-        toast(`Saved ${editing.name}`, 'success')
-        setDirty(false)
-      } else {
-        toast(data.error ?? 'Failed to save', 'error')
-      }
-    } catch {
+    const r = await apiFetch(`/files?path=${encodeURIComponent(editing.path)}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ content: editing.content }),
+    })
+    if (r.kind === 'ok') {
+      toast(`Saved ${editing.name}`, 'success')
+      setDirty(false)
+    } else if (r.kind === 'unauthorized') {
+      logout()
+    } else if (r.kind === 'unsupported') {
+      toast('This server build doesn’t support the file API', 'error')
+    } else if (r.kind === 'network') {
       toast('Could not save the file', 'error')
-    } finally {
-      setSaving(false)
+    } else {
+      toast(r.message || 'Failed to save', 'error')
     }
+    setSaving(false)
   }
 
   const download = async (entry: FileEntry) => {
     const filePath = joinPath(entry.name)
     try {
       const res = await fetch(`${API_BASE}/files/download?path=${encodeURIComponent(filePath)}`, { headers })
+      if (res.status === 401) { logout(); return }
+      if (res.status === 404) {
+        toast('This server build doesn’t support the file API', 'error')
+        return
+      }
       if (!res.ok) {
         toast('Download failed', 'error')
         return
@@ -154,6 +167,8 @@ function Files() {
         headers: { 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
         body: form,
       })
+      if (res.status === 401) { logout(); return }
+      if (res.status === 404) { toast('This server build doesn’t support the file API', 'error'); return }
       const data: APIResponse = await res.json()
       if (data.success) {
         toast(`Uploaded ${file.name}`, 'success')
@@ -270,11 +285,19 @@ function Files() {
       {loading && <p className="files-loading">Loading…</p>}
       {error && <p className="files-error">{error}</p>}
 
-      {!loading && !error && entries.length === 0 && (
+      {!loading && unsupported && (
+        <div className="files-unsupported">
+          <Folder size={22} />
+          <p>This server build doesn’t include the file API yet, so browsing files from here isn’t available.</p>
+          <p className="files-unsupported-sub">Everything else keeps working — this page lights up automatically once the server adds <code>/api/files</code>.</p>
+        </div>
+      )}
+
+      {!loading && !error && !unsupported && entries.length === 0 && (
         <p className="files-empty">This folder is empty.</p>
       )}
 
-      {!loading && !error && entries.length > 0 && (
+      {!loading && !error && !unsupported && entries.length > 0 && (
         <ul className="files-list">
           {entries.map((entry, i) => (
             <li key={entry.name} className="file-row stagger-item" style={{ '--i': Math.min(i, 14) } as React.CSSProperties}>

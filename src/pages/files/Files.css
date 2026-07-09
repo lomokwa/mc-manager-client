@@ -8,6 +8,31 @@
   animation: page-enter 0.4s var(--ease) both;
 }
 
+/* Shown when the server build doesn't ship the file API (404). */
+.files-unsupported {
+  max-width: 460px;
+  margin: 1.5rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--text-dim);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+.files-unsupported svg { color: var(--text-mute); }
+.files-unsupported p { margin: 0; font-size: 0.85rem; line-height: 1.5; }
+.files-unsupported-sub { color: var(--text-mute); font-size: 0.78rem; }
+.files-unsupported code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .files-bar {
   display: flex;
   align-items: center;
