@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X } from 'lucide-react'
+import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeOff } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
 import { getSuggestions, type Suggestion } from '../../lib/mcCommands'
 import {
   classifyLine, contentOf, parseScoreLine, parseWaypointLine, parseSessionLine,
-  isUnknownObjective, noScoreObjective, nameColor, type ConsoleLine, type LineType,
+  isUnknownObjective, noScoreObjective, nameColor, matchesHideRules,
+  type ConsoleLine, type LineType,
 } from '../../lib/consoleLines'
 import { loadConsolePrefs, saveConsolePrefs, type ConsolePrefs, type ConsoleView } from '../../lib/consolePrefs'
 import { apiFetch, authHeaders } from '../../lib/api'
@@ -79,6 +80,7 @@ function Console() {
   const [prefs, setPrefs] = useState<ConsolePrefs>(loadConsolePrefs)
   const [roster, setRoster] = useState<Player[]>([])
   const [insight, setInsight] = useState<Insight | null>(null)
+  const [hideDraft, setHideDraft] = useState('')
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -105,14 +107,24 @@ function Console() {
   }, [token, logout, running])
 
   const classified = useMemo(() => logs.map(classifyLine), [logs])
-  const quietHidden = useMemo(() => classified.reduce((n, l) => n + (l.quiet ? 1 : 0), 0), [classified])
+
+  // A line is "folded" when it's built-in mcm.* query traffic OR it matches one
+  // of the user's hide rules — either way it hides unless the Hidden chip is on.
+  const decorated = useMemo(
+    () => classified.map((l) => ({
+      ...l,
+      hidden: l.quiet || matchesHideRules(contentOf(l.raw), prefs.hideRules),
+    })),
+    [classified, prefs.hideRules],
+  )
+  const hiddenCount = useMemo(() => decorated.reduce((n, l) => n + (l.hidden ? 1 : 0), 0), [decorated])
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase()
-    return classified.filter((l) =>
-      (l.quiet ? prefs.showQuiet : prefs.show[l.type]) &&
+    return decorated.filter((l) =>
+      (l.hidden ? prefs.showQuiet : prefs.show[l.type]) &&
       (!q || l.raw.toLowerCase().includes(q)))
-  }, [classified, prefs, filter])
+  }, [decorated, prefs.showQuiet, prefs.show, filter])
 
   // Command suggestions — a cheap prefix filter over the static registry.
   const suggest = useMemo(() => getSuggestions(command), [command])
@@ -334,6 +346,21 @@ function Console() {
     URL.revokeObjectURL(url)
   }
 
+  const addHideRule = (e: React.FormEvent) => {
+    e.preventDefault()
+    const r = hideDraft.trim()
+    if (!r) return
+    setPrefs((p) => (p.hideRules.includes(r) ? p : { ...p, hideRules: [...p.hideRules, r] }))
+    setHideDraft('')
+  }
+  const removeHideRule = (r: string) =>
+    setPrefs((p) => ({ ...p, hideRules: p.hideRules.filter((x) => x !== r) }))
+
+  // Raw stays plain, but the log levels earn a colour so noise vs alerts read
+  // at a glance; player-facing lines keep the default terminal colour.
+  const rawLevelClass = (t: LineType) =>
+    t === 'error' ? 'lvl-error' : t === 'warn' ? 'lvl-warn' : t === 'system' ? 'lvl-system' : ''
+
   const usageParts = suggest.command ? splitUsage(suggest.command.usage) : null
 
   // ---- Row renderers ---------------------------------------------------------
@@ -419,27 +446,29 @@ function Console() {
       )
     }
     if (prefs.view === 'raw') {
-      return rows.map((l, i) => <div key={i} className="log-line">{l.raw}</div>)
+      return rows.map((l, i) => (
+        <div key={i} className={`log-line ${rawLevelClass(l.type)} ${l.hidden ? 'log-hidden' : ''}`}>{l.raw}</div>
+      ))
     }
     if (prefs.view === 'term') {
       return rows.map((l, i) => (
-        <div key={i} className={`cl-row term ${l.quiet ? 'quiet' : ''}`}>
+        <div key={i} className={`cl-row term ${l.hidden ? 'quiet' : ''}`}>
           <span className="cl-ts">{l.time ?? ''}</span>
           <span className="cl-dot" style={{ '--c': TYPE_META[l.type].color } as React.CSSProperties} />
           <span className="cl-body">
             {termBody(l)}
-            {l.quiet && <span className="cl-qbadge">QUIET</span>}
+            {l.hidden && <span className="cl-qbadge">HIDDEN</span>}
           </span>
         </div>
       ))
     }
     return rows.map((l, i) => (
-      <div key={i} className={`cl-row ${l.quiet ? 'quiet' : ''}`}>
+      <div key={i} className={`cl-row ${l.hidden ? 'quiet' : ''}`}>
         <span className="cl-ts">{l.time ?? ''}</span>
         {gutter(l)}
         <span className="cl-body">
           {feedBody(l)}
-          {l.quiet && <span className="cl-qbadge">QUIET</span>}
+          {l.hidden && <span className="cl-qbadge">HIDDEN</span>}
         </span>
       </div>
     ))
@@ -552,11 +581,38 @@ function Console() {
           className="cl-chip cl-chip-quiet"
           aria-pressed={prefs.showQuiet}
           onClick={() => setPrefs((p) => ({ ...p, showQuiet: !p.showQuiet }))}
-          title="Machine queries the panel sends to read stats — hidden so they don't clutter the console"
+          title="Folded lines — the panel's stat queries plus your hide rules. Toggle to reveal them."
         >
           <span className="cl-cd" />
-          Quiet queries · {quietHidden} hidden
+          Hidden · {hiddenCount}
         </button>
+      </div>
+
+      <div className="cl-hide">
+        <span className="cl-hide-label"><EyeOff size={13} /> Hide</span>
+        {prefs.hideRules.map((r) => (
+          <button
+            key={r}
+            type="button"
+            className="cl-rule"
+            onClick={() => removeHideRule(r)}
+            title="Remove this hide rule"
+          >
+            <span className="cl-rule-text">{r}</span>
+            <X size={11} />
+          </button>
+        ))}
+        <form className="cl-hide-add" onSubmit={addHideRule}>
+          <input
+            value={hideDraft}
+            onChange={(e) => setHideDraft(e.target.value)}
+            placeholder={prefs.hideRules.length ? 'add another…' : 'hide lines matching…  (text, or /regex/)'}
+            aria-label="Add a hide rule"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <button type="submit" className="cl-rule-add" disabled={!hideDraft.trim()}>Hide</button>
+        </form>
       </div>
 
       {insight && (

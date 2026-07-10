@@ -11,10 +11,12 @@ export interface ConsolePrefs {
   heads: boolean
   /** Show event-type icons in the gutter (feed view). */
   icons: boolean
-  /** Reveal quiet machine queries (hidden by default). */
+  /** Reveal folded lines: the built-in mcm.* queries plus the user's hide rules. */
   showQuiet: boolean
   /** Per-event-type visibility. */
   show: Record<LineType, boolean>
+  /** User patterns (plain text, or /regex/) whose matching lines are folded. */
+  hideRules: string[]
 }
 
 const KEY = 'mcm.console.prefs'
@@ -28,6 +30,7 @@ export const DEFAULT_PREFS: ConsolePrefs = {
     chat: true, join: true, leave: true, adv: true, death: true,
     warn: true, error: true, cmd: true, system: true,
   },
+  hideRules: [],
 }
 
 export function loadConsolePrefs(): ConsolePrefs {
@@ -39,6 +42,7 @@ export function loadConsolePrefs(): ConsolePrefs {
       ...DEFAULT_PREFS,
       ...p,
       show: { ...DEFAULT_PREFS.show, ...(p.show ?? {}) },
+      hideRules: Array.isArray(p.hideRules) ? p.hideRules.filter((r) => typeof r === 'string') : [],
     }
   } catch {
     return DEFAULT_PREFS
