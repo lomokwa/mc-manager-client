@@ -402,6 +402,105 @@
   border-color: rgba(78, 204, 163, 0.45);
 }
 
+/* ---- User hide rules row -------------------------------------------------- */
+
+.cl-hide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.cl-hide-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.cl-rule {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 230px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 3px 6px 3px 8px;
+  cursor: pointer;
+  transition: color var(--t), border-color var(--t);
+}
+.cl-rule-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cl-rule:hover {
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger, #e46b74) 45%, var(--line-soft));
+}
+.cl-rule:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.cl-hide-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+.cl-hide-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.74rem;
+  transition: border-color var(--t);
+}
+.cl-hide-add input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.cl-rule-add {
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.32rem 0.7rem;
+  cursor: pointer;
+  transition: background var(--t), color var(--t);
+}
+.cl-rule-add:hover:not(:disabled) {
+  background: rgba(78, 204, 163, 0.14);
+  color: var(--brand);
+}
+.cl-rule-add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Raw view: colour the log levels, keep everything else plain ---------- */
+
+.log-line.lvl-error { color: #e46b74; }
+.log-line.lvl-warn { color: #e0a33e; }
+.log-line.lvl-system { color: #8b93b8; }
+.log-line.log-hidden { opacity: 0.55; }
+
 /* ---- Player insight strip (quiet-query results) ---------------------------- */
 
 .cl-insight {

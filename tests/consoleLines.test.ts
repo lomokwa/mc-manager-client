@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   classifyLine, contentOf, isQuietContent, parseScoreLine, parseWaypointLine,
-  parseSessionLine, isUnknownObjective, noScoreObjective, nameColor,
+  parseSessionLine, isUnknownObjective, noScoreObjective, nameColor, matchesHideRules,
 } from '../src/lib/consoleLines.ts'
 
 const P = '[12:41:22] [Server thread/INFO]: '
@@ -98,6 +98,30 @@ test('objective-missing helpers', () => {
   assert.equal(isUnknownObjective("Unknown scoreboard objective 'totalKills'"), false)
   assert.equal(noScoreObjective("Can't get value of mcm.playtime for Notch; none is set"), 'mcm.playtime')
   assert.equal(noScoreObjective('Notch has 3 [mcm.playtime]'), null)
+})
+
+test('matchesHideRules: plain text is a case-insensitive substring', () => {
+  const c = 'There are 3 of a max of 20 players online: Notch, Steve'
+  assert.equal(matchesHideRules(c, ['of a max of']), true)
+  assert.equal(matchesHideRules(c, ['PLAYERS ONLINE']), true)
+  assert.equal(matchesHideRules(c, ['creepers']), false)
+  assert.equal(matchesHideRules(c, []), false)
+  assert.equal(matchesHideRules(c, ['  ']), false)
+})
+
+test('matchesHideRules: plain text with regex chars stays literal', () => {
+  // "[Server]" must match the literal bracketed text, not a character class.
+  assert.equal(matchesHideRules('[Server] hello', ['[Server]']), true)
+  assert.equal(matchesHideRules('save-all complete', ['[Server]']), false)
+})
+
+test('matchesHideRules: /regex/ form is honored, invalid falls back to literal', () => {
+  assert.equal(matchesHideRules('players online: 3', ['/players? online/']), true)
+  assert.equal(matchesHideRules('Player online', ['/^players/i']), false)
+  assert.equal(matchesHideRules('CamelCase', ['/camel/']), false) // no i flag → case-sensitive
+  assert.equal(matchesHideRules('CamelCase', ['/camel/i']), true)
+  // Malformed regex → literal fallback (the raw string is searched as-is).
+  assert.equal(matchesHideRules('a /oops(/ b', ['/oops(/']), true)
 })
 
 test('contentOf strips the log prefix and passes bare lines through', () => {

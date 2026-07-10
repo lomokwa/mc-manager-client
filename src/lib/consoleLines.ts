@@ -120,6 +120,30 @@ export function isUnknownObjective(content: string): boolean {
 }
 
 /**
+ * Does a line match any user hide rule? A rule is a plain (case-insensitive)
+ * substring, or a `/regex/flags` form for power users. Invalid regex falls
+ * back to a literal match so a bad pattern never throws mid-render.
+ */
+export function matchesHideRules(content: string, rules: readonly string[]): boolean {
+  const lower = content.toLowerCase()
+  for (const raw of rules) {
+    const rule = raw.trim()
+    if (!rule) continue
+    const slash = /^\/(.+)\/([a-z]*)$/i.exec(rule)
+    if (slash) {
+      try {
+        if (new RegExp(slash[1], slash[2]).test(content)) return true
+        continue
+      } catch {
+        // Malformed regex — treat the whole thing as literal text instead.
+      }
+    }
+    if (lower.includes(rule.toLowerCase())) return true
+  }
+  return false
+}
+
+/**
  * Epoch millis from "Storage mcm:sessions has the following contents: 1720…L"
  * — the per-player join stamp the client writes when it sees a join line.
  */
