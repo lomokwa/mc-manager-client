@@ -231,3 +231,407 @@
   }
 }
 
+/* ---- Rich console: view switch, toggles, player picker ------------------- */
+
+.cl-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(22, 33, 62, 0.25);
+}
+
+.cl-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+}
+.cl-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--t), color var(--t);
+}
+.cl-seg button.on {
+  background: rgba(78, 204, 163, 0.16);
+  color: var(--brand);
+}
+.cl-seg button:not(.on):hover {
+  color: var(--text);
+}
+.cl-seg button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.cl-tog {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.cl-tog input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.cl-track {
+  width: 30px;
+  height: 17px;
+  border-radius: 17px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line-soft);
+  position: relative;
+  transition: background var(--t), border-color var(--t);
+  flex: none;
+}
+.cl-track::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--text-mute);
+  transition: transform 0.18s var(--ease), background var(--t);
+}
+.cl-tog input:checked + .cl-track {
+  background: rgba(78, 204, 163, 0.2);
+  border-color: var(--brand);
+}
+.cl-tog input:checked + .cl-track::after {
+  transform: translateX(13px);
+  background: var(--brand);
+}
+.cl-tog input:focus-visible + .cl-track {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.cl-pick {
+  margin-left: auto;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+  max-width: 190px;
+  transition: border-color var(--t);
+}
+.cl-pick:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.cl-pick:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Event-type filter chips ---------------------------------------------- */
+
+.cl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.cl-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 4px 10px 4px 8px;
+  cursor: pointer;
+  transition: opacity var(--t), color var(--t), border-color var(--t);
+}
+.cl-cd {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c, var(--text-mute));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--c, #8b93b8) 20%, transparent);
+  flex: none;
+}
+.cl-chip[aria-pressed="false"] {
+  opacity: 0.4;
+}
+.cl-chip[aria-pressed="false"] .cl-cd {
+  box-shadow: none;
+}
+.cl-chip:hover {
+  color: var(--text);
+}
+.cl-chip:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.cl-chip-quiet {
+  --c: var(--brand);
+  margin-left: auto;
+}
+.cl-chip-quiet[aria-pressed="true"] {
+  color: var(--brand);
+  border-color: rgba(78, 204, 163, 0.45);
+}
+
+/* ---- Player insight strip (quiet-query results) ---------------------------- */
+
+.cl-insight {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(78, 204, 163, 0.08);
+  animation: cmd-in 0.18s var(--ease) both;
+}
+.cl-ins-head {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex: none;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.cl-ins-name {
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+.cl-ins-stat {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.cl-ins-stat b {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.cl-ins-stat span {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.cl-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--brand);
+  background: rgba(78, 204, 163, 0.14);
+  border: 1px solid rgba(78, 204, 163, 0.35);
+  border-radius: 7px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: background var(--t);
+}
+.cl-mini:hover:not(:disabled) {
+  background: rgba(78, 204, 163, 0.24);
+}
+.cl-mini:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cl-ins-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background var(--t), color var(--t);
+}
+.cl-ins-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+/* ---- Feed / Terminal+ rows -------------------------------------------------- */
+
+.cl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 2px 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 26px;
+  animation: cl-in 0.2s var(--ease) both;
+}
+@keyframes cl-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+.cl-ts {
+  flex: none;
+  color: var(--text-mute);
+  font-size: 0.7rem;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+}
+.cl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c, var(--text-mute));
+  flex: none;
+  margin-top: 7px;
+}
+.cl-gutter {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--c);
+  background: color-mix(in oklab, var(--c) 16%, transparent);
+}
+.cl-head {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  flex: none;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.cl-body {
+  min-width: 0;
+  flex: 1;
+  word-break: break-word;
+}
+.cl-bubble {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  border-top-left-radius: 3px;
+  padding: 3px 9px;
+  max-width: 100%;
+}
+.cl-nm {
+  font-weight: 600;
+  font-size: 0.76rem;
+}
+.cl-msg {
+  color: var(--text);
+}
+.cl-who {
+  font-weight: 600;
+  color: var(--text);
+}
+.cl-dim {
+  color: var(--text-dim);
+}
+.cl-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(232, 182, 76, 0.18);
+  color: #e8b64c;
+}
+.cl-lvl {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.cl-lvl.warn {
+  background: rgba(224, 163, 62, 0.2);
+  color: #e0a33e;
+}
+.cl-lvl.error {
+  background: rgba(228, 107, 116, 0.2);
+  color: #e46b74;
+}
+.cl-cmd {
+  color: #6ea8e6;
+}
+.cl-tname {
+  font-weight: 600;
+}
+.cl-ink {
+  color: var(--text);
+}
+.cl-qbadge {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-mute);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 0 4px;
+  vertical-align: 2px;
+}
+.cl-row.quiet {
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .cl-pick {
+    margin-left: 0;
+    width: 100%;
+    max-width: none;
+  }
+  .cl-chip-quiet {
+    margin-left: 0;
+  }
+  .cl-ts {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-row,
+  .cl-insight {
+    animation: none;
+  }
+}
+
