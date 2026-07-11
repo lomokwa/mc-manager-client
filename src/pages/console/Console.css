@@ -325,26 +325,108 @@
   outline-offset: 2px;
 }
 
-.cl-pick {
+.cl-pick-wrap {
+  position: relative;
   margin-left: auto;
+}
+.cl-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 0.35rem 0.6rem;
+  min-width: 150px;
+  max-width: 210px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.25);
-  color: var(--text);
+  color: var(--text-dim);
   font-family: inherit;
   font-size: 0.76rem;
   cursor: pointer;
-  max-width: 190px;
-  transition: border-color var(--t);
+  transition: border-color var(--t), color var(--t);
 }
-.cl-pick:focus {
-  outline: none;
-  border-color: var(--brand);
+.cl-pick:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--line);
+}
+.cl-pick:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 .cl-pick:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.cl-pick-caret {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-mute);
+}
+.cl-pick-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  min-width: 190px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  z-index: 40;
+  background: #1b2545;
+  border: 1px solid #2c3f6d;
+  border-radius: 10px;
+  box-shadow: var(--shadow-2);
+  animation: cmd-in 0.14s var(--ease) both;
+}
+.cl-pick-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+.cl-pick-opt:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.cl-pick-opt:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.cl-pick-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cl-pick-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-mute);
+  background: transparent;
+}
+.cl-pick-dot.is-online {
+  background: #5fc47f;
+  border-color: #5fc47f;
+  box-shadow: 0 0 0 3px rgba(95, 196, 127, 0.18);
+}
+.cl-pick-on {
+  flex: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #5fc47f;
+  background: rgba(95, 196, 127, 0.14);
+  padding: 1px 7px;
+  border-radius: 999px;
 }
 
 /* ---- Event-type filter chips ---------------------------------------------- */
