@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeOff } from 'lucide-react'
+import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeOff, ChevronDown } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
@@ -81,6 +81,8 @@ function Console() {
   const [roster, setRoster] = useState<Player[]>([])
   const [insight, setInsight] = useState<Insight | null>(null)
   const [hideDraft, setHideDraft] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -105,6 +107,21 @@ function Console() {
     })
     return () => { cancelled = true }
   }, [token, logout, running])
+
+  // Close the player picker on an outside click or Escape.
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPickerOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
 
   const classified = useMemo(() => logs.map(classifyLine), [logs])
 
@@ -545,21 +562,38 @@ function Console() {
             </label>
           </>
         )}
-        <select
-          className="cl-pick"
-          value=""
-          disabled={!running || roster.length === 0}
-          onChange={(e) => { if (e.target.value) inspectPlayer(e.target.value) }}
-          aria-label="Inspect a player"
-          title={running ? 'Read a player’s stats via quiet queries' : 'Start the server to inspect players'}
-        >
-          <option value="">Inspect player…</option>
-          {roster.map((p) => (
-            <option key={p.uuid} value={p.name}>
-              {p.online ? '● ' : '○ '}{p.name}
-            </option>
-          ))}
-        </select>
+        <div className="cl-pick-wrap" ref={pickerRef}>
+          <button
+            type="button"
+            className="cl-pick"
+            disabled={!running || roster.length === 0}
+            aria-haspopup="listbox"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((o) => !o)}
+            title={running ? 'Read a player’s stats via quiet queries' : 'Start the server to inspect players'}
+          >
+            Inspect player…
+            <ChevronDown size={14} className="cl-pick-caret" />
+          </button>
+          {pickerOpen && (
+            <div className="cl-pick-menu" role="listbox" aria-label="Inspect a player">
+              {roster.map((p) => (
+                <button
+                  key={p.uuid}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className="cl-pick-opt"
+                  onClick={() => { inspectPlayer(p.name); setPickerOpen(false) }}
+                >
+                  <span className={`cl-pick-dot ${p.online ? 'is-online' : ''}`} />
+                  <span className="cl-pick-name">{p.name}</span>
+                  {p.online && <span className="cl-pick-on">online</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="cl-chips" aria-label="Event filters">
