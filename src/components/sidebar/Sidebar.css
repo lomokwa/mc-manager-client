@@ -98,6 +98,57 @@
   color: var(--danger);
 }
 
+/* Who's signed in — read from the JWT, sits above Logout. */
+.sidebar-user {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line-soft);
+}
+.sidebar-user + .sidebar-logout {
+  margin-top: 0;
+  border-top: none;
+}
+.sidebar-user-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand);
+  background: rgba(78, 204, 163, 0.16);
+}
+.sidebar-user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.sidebar-user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-user-sub {
+  font-size: 0.66rem;
+  color: var(--text-mute);
+}
+
+@media (max-width: 768px) {
+  .sidebar-user { display: none; }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 100%;

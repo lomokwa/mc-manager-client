@@ -14,7 +14,7 @@ const navItems: { to: string; label: string; icon: LucideIcon }[] = [
 ]
 
 function Sidebar() {
-  const { logout } = useAuth()
+  const { logout, username } = useAuth()
 
   return (
     <aside className="sidebar">
@@ -32,6 +32,15 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      {username && (
+        <div className="sidebar-user" title={`Signed in as ${username}`}>
+          <span className="sidebar-user-avatar" aria-hidden="true">{username.charAt(0).toUpperCase()}</span>
+          <div className="sidebar-user-meta">
+            <span className="sidebar-user-name">{username}</span>
+            <span className="sidebar-user-sub">Signed in</span>
+          </div>
+        </div>
+      )}
       <button className="sidebar-item sidebar-logout" onClick={logout}>
         <LogOut className="sidebar-icon" size={18} />
         <span className="sidebar-label">Logout</span>
