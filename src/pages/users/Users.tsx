@@ -57,14 +57,6 @@ function Users() {
     setCopied(false)
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-
   return (
     <div className="users-page">
       <div className="users-header">
@@ -100,27 +92,24 @@ function Users() {
 
       {loading && <p className="users-loading">Loading users...</p>}
 
-      {!loading && (
-        <section className="users-section">
-          <h3>Registered Users</h3>
-          {users.length === 0 ? (
-            <p className="users-empty">No users registered yet.</p>
-          ) : (
-            <div className="users-list">
-              {users.map((user) => (
-                <div key={user.id} className="user-card">
-                  <div className="user-avatar-placeholder">
-                    {user.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="user-info">
-                    <span className="user-name">{user.username}</span>
-                    <span className="user-date">Joined {formatDate(user.created_at)}</span>
-                  </div>
-                </div>
-              ))}
+      {!loading && users.length === 0 && (
+        <p className="users-empty">No users registered yet.</p>
+      )}
+
+      {!loading && users.length > 0 && (
+        <div className="users-list">
+          {users.map((user) => (
+            <div key={user.id} className="user-card">
+              <div className="user-avatar-placeholder">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <div className="user-info">
+                <span className="user-name">{user.username}</span>
+                <span className="user-joined">Joined {new Date(user.created_at).toLocaleDateString()}</span>
+              </div>
             </div>
-          )}
-        </section>
+          ))}
+        </div>
       )}
     </div>
   )

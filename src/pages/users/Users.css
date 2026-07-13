@@ -50,16 +50,6 @@
   color: #f87171;
 }
 
-.users-section {
-  margin-bottom: 2rem;
-}
-
-.users-section h3 {
-  font-size: 1rem;
-  margin: 0 0 0.75rem;
-  color: var(--color-text-muted, #aaa);
-}
-
 .users-list {
   display: flex;
   flex-direction: column;
@@ -77,33 +67,33 @@
 }
 
 .user-avatar-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
   background: var(--color-primary, #7c3aed);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .user-name {
+  font-size: 0.95rem;
   font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.user-date {
-  font-size: 0.75rem;
-  color: var(--color-text-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invitations-list {
