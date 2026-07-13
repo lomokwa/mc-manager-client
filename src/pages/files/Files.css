@@ -258,8 +258,104 @@
 }
 
 .file-dl {
-  margin-right: 0.4rem;
   color: var(--text-dim);
+}
+
+.file-del {
+  margin-right: 0.4rem;
+  color: var(--text-mute);
+}
+
+.file-del:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Danger button (used in the delete dialog). */
+.fbtn-danger {
+  background: rgba(233, 69, 96, 0.14);
+  border-color: rgba(233, 69, 96, 0.42);
+  color: #f08a9c;
+}
+
+.fbtn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: rgba(233, 69, 96, 0.24);
+}
+
+/* Delete confirmation dialog */
+.files-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 10, 20, 0.62);
+  backdrop-filter: blur(4px);
+  animation: files-scrim-in 0.16s var(--ease) both;
+}
+
+.files-modal {
+  width: min(400px, 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  padding: 1.4rem 1.4rem 1.2rem;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.85);
+  animation: files-modal-in 0.2s var(--ease) both;
+}
+
+.files-modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--danger);
+  background: rgba(233, 69, 96, 0.14);
+  margin-bottom: 0.85rem;
+}
+
+.files-modal-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.files-modal-body {
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.files-modal-body b {
+  color: var(--text);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.files-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+@keyframes files-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes files-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .files-modal-scrim,
+  .files-modal { animation: none; }
 }
 
 /* Editor */
