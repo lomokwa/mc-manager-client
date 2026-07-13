@@ -5,6 +5,19 @@ import { apiFetch, authHeaders } from '../../lib/api'
 import type { User, Invitation } from '../../types/user'
 import './Users.css'
 
+const AVATAR_COLORS = [
+  '#7c3aed', '#e03e6a', '#2563eb', '#0891b2', '#059669',
+  '#d97706', '#dc2626', '#7c3aed', '#4f46e5', '#0d9488',
+]
+
+function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
 function Users() {
   const { token, logout } = useAuth()
   const [users, setUsers] = useState<User[]>([])
@@ -100,7 +113,7 @@ function Users() {
         <div className="users-list">
           {users.map((user) => (
             <div key={user.id} className="user-card">
-              <div className="user-avatar-placeholder">
+              <div className="user-avatar-placeholder" style={{ background: getAvatarColor(user.username) }}>
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <div className="user-info">
