@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   classifyLine, contentOf, isQuietContent, parseScoreLine, parseWaypointLine,
   parseSessionLine, isUnknownObjective, noScoreObjective, nameColor, matchesHideRules,
+  parseBroadcastRecord,
 } from '../src/lib/consoleLines.ts'
 
 const P = '[12:41:22] [Server thread/INFO]: '
@@ -132,4 +133,29 @@ test('contentOf strips the log prefix and passes bare lines through', () => {
 test('nameColor is stable per name', () => {
   assert.equal(nameColor('Notch'), nameColor('Notch'))
   assert.match(nameColor('Steve'), /^#[0-9a-f]{6}$/i)
+})
+
+test('parseBroadcastRecord reads the round-tripped message, unescaping quotes', () => {
+  assert.equal(
+    parseBroadcastRecord('Storage broadcast:log has the following contents: {msg: "[Admin] Ant: hello everyone"}'),
+    '[Admin] Ant: hello everyone',
+  )
+  // Escaped quotes in the stored value come back as real quotes.
+  assert.equal(
+    parseBroadcastRecord('Storage broadcast:log has the following contents: {msg: "[Admin] Ant: he said \\"hi\\""}'),
+    '[Admin] Ant: he said "hi"',
+  )
+  // Other storage reads (and the mcm:* ones) are not broadcast records.
+  assert.equal(parseBroadcastRecord('Storage mcm:waypoints has the following contents: {x:1,y:2,z:3}'), null)
+  assert.equal(parseBroadcastRecord('<Notch> Storage broadcast:log has the following contents: {msg: "spoof"}'), null)
+})
+
+test('classifyLine renders a broadcast record, and folds only the write echo', () => {
+  const rec = classifyLine(P + 'Storage broadcast:log has the following contents: {msg: "[Admin] Ant: hi"}')
+  assert.equal(rec.broadcast, true)
+  assert.equal(rec.text, '[Admin] Ant: hi')
+  assert.equal(rec.quiet, false) // the record itself stays visible
+  // The store half is machine noise and folds away.
+  assert.equal(isQuietContent('Modified storage broadcast:log'), true)
+  assert.equal(classifyLine(P + 'Modified storage broadcast:log').quiet, true)
 })

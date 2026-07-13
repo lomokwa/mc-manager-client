@@ -19,6 +19,8 @@ export interface ConsoleLine {
   text?: string
   /** Advancement / challenge / goal title. */
   adv?: string
+  /** The recorded text of a broadcast the console sent (rendered specially). */
+  broadcast?: boolean
   /** Matched a quiet rule — machine query traffic, hidden by default. */
   quiet: boolean
 }
@@ -59,6 +61,8 @@ export const QUIET_RULES: readonly RegExp[] = [
   // Storage reads/writes: "Storage mcm:waypoints has the following contents: …".
   /^Storage mcm:\S+ has the following contents:/,
   /^(?:Modified|Merged|Removed).*storage mcm:/,
+  // The write half of a broadcast record — the read half stays visible.
+  /^(?:Modified|Merged|Removed).*storage broadcast:/,
 ]
 
 export function isQuietContent(content: string): boolean {
@@ -72,6 +76,9 @@ export function classifyLine(raw: string): ConsoleLine {
   const quiet = isQuietContent(content)
 
   if (content.startsWith('> ')) return { raw, type: 'cmd', time, text: content.slice(2), quiet }
+
+  const bc = parseBroadcastRecord(content)
+  if (bc !== null) return { raw, type: 'system', time, text: bc, broadcast: true, quiet }
 
   let m = CHAT.exec(content)
   if (m) return { raw, type: 'chat', time, who: m[1], text: m[2], quiet }
@@ -156,6 +163,17 @@ export function parseSessionLine(content: string): number | null {
 export function noScoreObjective(content: string): string | null {
   const m = /^Can't get value of (mcm\.\S+) for /.exec(content)
   return m ? m[1] : null
+}
+
+/**
+ * The recorded text of a broadcast the console sent. The client stores the
+ * "[Admin] Name: msg" line in `broadcast:log` storage and reads it straight
+ * back, so the `data get` echo carries it to every console (and the log file) —
+ * tellraw itself is silent. Returns that text, or null when it isn't a record.
+ */
+export function parseBroadcastRecord(content: string): string | null {
+  const m = /^Storage broadcast:log has the following contents: \{.*?\bmsg:\s*"((?:[^"\\]|\\.)*)"/.exec(content)
+  return m ? m[1].replace(/\\(.)/g, '$1') : null
 }
 
 // ---- Stable per-player accent colour (for chat names/avatars) --------------

@@ -3,7 +3,8 @@ import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeO
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
-import { getSuggestions, type Suggestion } from '../../lib/mcCommands'
+import { getSuggestions, isCommandName, type Suggestion } from '../../lib/mcCommands'
+import { parseConsoleInput } from '../../lib/consoleInput'
 import {
   classifyLine, contentOf, parseScoreLine, parseWaypointLine, parseSessionLine,
   isUnknownObjective, noScoreObjective, nameColor, matchesHideRules,
@@ -12,7 +13,7 @@ import {
 import { loadConsolePrefs, saveConsolePrefs, type ConsolePrefs, type ConsoleView } from '../../lib/consolePrefs'
 import { apiFetch, authHeaders } from '../../lib/api'
 import { formatPlaytime } from '../../lib/playtime'
-import { isValidName, teleportToCoordsCommand } from '../../lib/playerCommands'
+import { isValidName, teleportToCoordsCommand, broadcastCommands } from '../../lib/playerCommands'
 import type { Player } from '../../types/player'
 import './Console.css'
 
@@ -70,7 +71,7 @@ interface PendingInspect {
 
 function Console() {
   const { running, consoleConnected, logs, appendLog, clearLogs, sendCommand, subscribe } = useServer()
-  const { token, logout } = useAuth()
+  const { token, logout, username } = useAuth()
   const { toast } = useToast()
   const [command, setCommand] = useState('')
   const [filter, setFilter] = useState('')
@@ -302,13 +303,29 @@ function Console() {
     inputRef.current?.focus()
   }
 
+  // Chat-by-default input: plain text is broadcast to everyone (pretty tellraw
+  // + a shared log record), "/" forces a command, and a known command word runs
+  // even without a slash. `say` is intercepted so it becomes the broadcast.
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
-    const cmd = command.trim()
-    if (!cmd) return
-    sendCommand(cmd)
-    appendLog(`> ${cmd}`)
-    historyRef.current = [cmd, ...historyRef.current.filter((c) => c !== cmd)].slice(0, 100)
+    const raw = command.trim()
+    if (!raw) return
+    const action = parseConsoleInput(raw, isCommandName)
+    if (action.kind === 'command') {
+      sendCommand(action.command)
+      appendLog(`> ${action.command}`)
+    } else if (action.kind === 'broadcast') {
+      const b = broadcastCommands(action.message, username)
+      if (b) {
+        // The pretty message for players, then store-and-read the record so it
+        // lands in every console and the log file (tellraw is silent).
+        sendCommand(b.say)
+        sendCommand(b.logWrite)
+        sendCommand(b.logShow)
+        toast('Broadcast sent to everyone', 'success')
+      }
+    }
+    historyRef.current = [raw, ...historyRef.current.filter((c) => c !== raw)].slice(0, 100)
     historyIdxRef.current = -1
     setCommand('')
   }
@@ -403,6 +420,9 @@ function Console() {
   }
 
   const feedBody = (l: ConsoleLine) => {
+    if (l.broadcast) {
+      return <><span className="cl-bc-tag">Broadcast</span> <span className="cl-msg">{l.text}</span></>
+    }
     switch (l.type) {
       case 'chat':
         return (
@@ -440,6 +460,9 @@ function Console() {
   }
 
   const termBody = (l: ConsoleLine) => {
+    if (l.broadcast) {
+      return <><span className="cl-bc-tag">Broadcast</span> <span className="cl-ink">{l.text}</span></>
+    }
     if (l.type === 'chat') {
       return (
         <>
@@ -738,7 +761,7 @@ function Console() {
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={running ? 'Type a command…  (Tab to complete, ↑/↓ history)' : 'Server is not running'}
+          placeholder={running ? 'Message everyone, or /command…  (Tab to complete, ↑/↓ history)' : 'Server is not running'}
           disabled={!running}
         />
       </form>

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { getSuggestions, findCommand } from '../src/lib/mcCommands.ts'
+import { getSuggestions, findCommand, isCommandName } from '../src/lib/mcCommands.ts'
 
 // Apply the top suggestion the way the Console's Tab-complete does.
 function applyFirst(input: string): string {
@@ -44,4 +44,15 @@ test('unknown commands yield no suggestions', () => {
 test('findCommand resolves case-insensitively by exact name', () => {
   assert.equal(findCommand('GAMEMODE')?.name, 'gamemode')
   assert.equal(findCommand('nope'), undefined)
+})
+
+test('isCommandName knows vanilla commands (incl. ones not in the suggestion list)', () => {
+  assert.equal(isCommandName('list'), true)
+  assert.equal(isCommandName('OP'), true)
+  assert.equal(isCommandName('stop'), true)
+  assert.equal(isCommandName('forceload'), true) // not in COMMANDS, still a command
+  assert.equal(isCommandName('data'), true)
+  assert.equal(isCommandName('hello'), false)
+  assert.equal(isCommandName('selfrules'), false) // modded — reached via a leading slash
+  assert.equal(isCommandName(''), false)
 })
