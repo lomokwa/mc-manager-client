@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Folder, FileText, ChevronRight, ArrowUp, RefreshCw, Upload, UploadCloud, Download, Save, X, Braces,
+  Trash2, AlertTriangle,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
@@ -43,8 +44,23 @@ function Files() {
   const [dragging, setDragging] = useState(false)
   const dragDepth = useRef(0)
   const uploadRef = useRef<HTMLInputElement>(null)
+  // The entry the user is about to delete (drives the confirmation dialog).
+  const [pendingDelete, setPendingDelete] = useState<FileEntry | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null)
 
   const headers = authHeaders(token)
+
+  // While the confirm dialog is open: focus Cancel and let Esc dismiss it.
+  useEffect(() => {
+    if (!pendingDelete) return
+    cancelDeleteRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !deleting) setPendingDelete(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [pendingDelete, deleting])
 
   useEffect(() => {
     let cancelled = false
@@ -157,6 +173,33 @@ function Files() {
       URL.revokeObjectURL(url)
     } catch {
       toast('Download failed', 'error')
+    }
+  }
+
+  // Delete the entry the dialog is confirming. Directories go recursively, so
+  // the dialog spells that out before the user commits.
+  const confirmDelete = async () => {
+    if (!pendingDelete) return
+    const target = pendingDelete
+    const filePath = joinPath(target.name)
+    setDeleting(true)
+    const r = await apiFetch(`/files?path=${encodeURIComponent(filePath)}`, { method: 'DELETE', headers })
+    setDeleting(false)
+    if (r.kind === 'ok') {
+      toast(`Deleted ${target.name}`, 'success')
+      setPendingDelete(null)
+      // Close the editor if it was showing the file we just removed.
+      if (editing && editing.path === filePath) setEditing(null)
+      setReload((n) => n + 1)
+    } else if (r.kind === 'unauthorized') {
+      logout()
+    } else if (r.kind === 'unsupported') {
+      toast('This server build doesn’t support deleting files yet', 'error')
+      setPendingDelete(null)
+    } else if (r.kind === 'network') {
+      toast('Could not delete — the server is unreachable', 'error')
+    } else {
+      toast(r.message || `Couldn’t delete ${target.name}`, 'error')
     }
   }
 
@@ -366,9 +409,48 @@ function Files() {
                   <Download size={14} />
                 </button>
               )}
+              <button
+                className="fbtn fbtn-icon file-del"
+                onClick={() => setPendingDelete(entry)}
+                title={`Delete ${entry.name}`}
+                aria-label={`Delete ${entry.name}`}
+              >
+                <Trash2 size={14} />
+              </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {pendingDelete && (
+        <div className="files-modal-scrim" onClick={() => !deleting && setPendingDelete(null)}>
+          <div
+            className="files-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="files-del-title"
+            aria-describedby="files-del-body"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="files-modal-icon"><AlertTriangle size={20} /></div>
+            <h3 id="files-del-title" className="files-modal-title">
+              Delete {pendingDelete.is_dir ? 'this folder' : 'this file'}?
+            </h3>
+            <p id="files-del-body" className="files-modal-body">
+              <b>{pendingDelete.name}</b>
+              {pendingDelete.is_dir ? ' and everything inside it' : ''} will be permanently deleted. This can’t be undone.
+            </p>
+            <div className="files-modal-actions">
+              <button ref={cancelDeleteRef} className="fbtn fbtn-ghost" onClick={() => setPendingDelete(null)} disabled={deleting}>
+                Cancel
+              </button>
+              <button className="fbtn fbtn-danger" onClick={confirmDelete} disabled={deleting}>
+                <Trash2 size={15} />
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
