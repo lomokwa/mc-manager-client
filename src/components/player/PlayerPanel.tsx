@@ -4,6 +4,7 @@ import {
   Ban, UserX, Undo2, Map as MapIcon, Clock, Skull, LogIn,
 } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
+import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../toast/ToastContext'
 import type { Player } from '../../types/player'
 import {
@@ -42,6 +43,7 @@ type ConfirmKind = 'kick' | 'ban' | 'ipban' | null
 
 function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: PlayerPanelProps) {
   const { running, sendCommand, chatLog } = useServer()
+  const { username } = useAuth()
   const { toast } = useToast()
   const bluemapUrl = useBlueMapUrl()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -201,7 +203,7 @@ function PlayerPanel({ player, onlinePlayers, worldSpawn, onClose, onRefresh }: 
   const sendDm = () => {
     const text = message.trim()
     if (!text) return
-    dispatch(directMessageCommand(player.name, message, msgColor), `Message sent to ${player.name}`)
+    dispatch(directMessageCommand(player.name, message, msgColor, username), `Message sent to ${player.name}`)
     // Sort just after the newest chat message present when we send, so our DM
     // lands in order and later incoming messages fall below it.
     const lastSeq = chatLog.length ? chatLog[chatLog.length - 1].seq : -1

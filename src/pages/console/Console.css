@@ -773,6 +773,19 @@
 .cl-cmd {
   color: #6ea8e6;
 }
+/* "Broadcast" pill on a message the admin sent to everyone. */
+.cl-bc-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(78, 204, 163, 0.16);
+  color: var(--brand);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
 .cl-tname {
   font-weight: 600;
 }

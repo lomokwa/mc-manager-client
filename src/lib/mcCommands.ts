@@ -98,6 +98,25 @@ export function findCommand(name: string): CommandSpec | undefined {
   return COMMANDS.find((c) => c.name === n)
 }
 
+// A broader set of vanilla (1.21-era) command *names* than the curated
+// suggestion list above — used to tell a console command from chat. Anything
+// here, typed without a leading slash, still runs as a command; an unknown
+// first word is treated as chat. Modded or late commands always work by
+// prefixing "/". Duplicates with COMMANDS are harmless (it's a Set).
+const COMMAND_NAMES = new Set<string>([
+  ...COMMANDS.map((c) => c.name),
+  'advancement', 'attribute', 'bossbar', 'damage', 'data', 'debug', 'deop',
+  'fillbiome', 'forceload', 'function', 'item', 'jfr', 'loot', 'me', 'perf',
+  'place', 'publish', 'random', 'recipe', 'return', 'ride', 'schedule',
+  'spectate', 'spreadplayers', 'tag', 'teammsg', 'tm', 'transfer', 'trigger',
+  'w', 'pardon-ip',
+])
+
+/** True when `token` is a known Minecraft command name (case-insensitive). */
+export function isCommandName(token: string): boolean {
+  return COMMAND_NAMES.has(token.toLowerCase())
+}
+
 export interface Suggestion {
   /** The text to insert for the current token. */
   value: string

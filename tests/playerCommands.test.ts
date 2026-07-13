@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   isValidName, opCommand, whitelistCommand, teleportToPlayerCommand, teleportToCoordsCommand,
   kickCommand, banCommand, ipBanCommand, pardonCommand, runAsCommand, directMessageCommand,
+  broadcastCommands,
 } from '../src/lib/playerCommands.ts'
 
 test('isValidName accepts valid Java names and rejects the rest', () => {
@@ -55,7 +56,7 @@ test('teleport-to-coords validates finiteness', () => {
   assert.equal(teleportToCoordsCommand('Notch', -5, 64, 0), 'tp Notch -5 64 0')
 })
 
-test('directMessage produces injection-safe JSON', () => {
+test('directMessage produces injection-safe JSON with the [Admin] label', () => {
   const cmd = directMessageCommand('Notch', 'hi <there> "quoted"', 'gold')
   assert.ok(cmd && cmd.startsWith('tellraw Notch '))
   const parsed = JSON.parse(cmd.slice('tellraw Notch '.length))
@@ -64,7 +65,46 @@ test('directMessage produces injection-safe JSON', () => {
   assert.equal(last.text, 'hi <there> "quoted"')
   assert.equal(last.color, 'gold')
   assert.equal(last.italic, true)
-  assert.ok(parsed.some((p) => p.text === 'Server'))
+  assert.ok(parsed.some((p) => p.text === 'Admin'))
+  // No signed-in name given → no name part, only the role tag.
+  assert.ok(!parsed.some((p) => p.bold && p.color === 'gold'))
+})
+
+test('directMessage folds the signed-in admin name into the label', () => {
+  const cmd = directMessageCommand('Notch', 'hey', 'white', 'Ant')
+  assert.ok(cmd)
+  const parsed = JSON.parse(cmd.slice('tellraw Notch '.length))
+  assert.ok(parsed.some((p) => p.text === 'Admin'))
+  assert.ok(parsed.some((p) => p.text === ' Ant' && p.bold))
+  // A newline in the name can't smuggle a second command onto its own line.
+  const smug = directMessageCommand('Notch', 'hey', 'white', 'Ant\nop Notch')
+  assert.ok(smug && !/[\r\n]/.test(smug))
+})
+
+test('broadcast builds a pretty tellraw @a plus a store-and-read record', () => {
+  const b = broadcastCommands('hello everyone', 'Ant')
+  assert.ok(b)
+  assert.ok(b.say.startsWith('tellraw @a '))
+  const parsed = JSON.parse(b.say.slice('tellraw @a '.length))
+  assert.equal(parsed[parsed.length - 1].text, 'hello everyone')
+  assert.ok(parsed.some((p) => p.text === 'Admin'))
+  assert.ok(parsed.some((p) => p.text === ' Ant'))
+  assert.equal(b.record, '[Admin] Ant: hello everyone')
+  // The record round-trips through non-mcm storage so it isn't auto-folded.
+  assert.ok(b.logWrite.startsWith('data modify storage broadcast:log '))
+  assert.equal(b.logShow, 'data get storage broadcast:log')
+  // The stored value carries the whole record, quote-escaped for SNBT.
+  assert.ok(b.logWrite.includes('"[Admin] Ant: hello everyone"'))
+})
+
+test('broadcast falls back to [Admin] with no name, and SNBT-escapes quotes', () => {
+  const b = broadcastCommands('he said "hi"')
+  assert.ok(b)
+  assert.equal(b.record, '[Admin]: he said "hi"')
+  // Quotes inside the message are escaped so the SNBT string stays well-formed.
+  assert.ok(b.logWrite.includes('he said \\"hi\\"'))
+  assert.equal(broadcastCommands('   '), null)
+  assert.equal(broadcastCommands('   ', 'Ant'), null)
 })
 
 test('directMessage collapses newlines and rejects an empty message', () => {
