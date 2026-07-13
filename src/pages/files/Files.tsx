@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Folder, FileText, ChevronRight, ArrowUp, RefreshCw, Upload, Download, Save, X, Braces,
+  Folder, FileText, ChevronRight, ArrowUp, RefreshCw, Upload, UploadCloud, Download, Save, X, Braces,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
@@ -40,6 +40,8 @@ function Files() {
   const [saving, setSaving] = useState(false)
   const [reload, setReload] = useState(0)
   const [unsupported, setUnsupported] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const dragDepth = useRef(0)
   const uploadRef = useRef<HTMLInputElement>(null)
 
   const headers = authHeaders(token)
@@ -158,27 +160,62 @@ function Files() {
     }
   }
 
-  const upload = async (file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    try {
-      const res = await fetch(`${API_BASE}/files/upload?path=${encodeURIComponent(path)}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
-        body: form,
-      })
-      if (res.status === 401) { logout(); return }
-      if (res.status === 404) { toast('This server build doesn’t support the file API', 'error'); return }
-      const data: APIResponse = await res.json()
-      if (data.success) {
-        toast(`Uploaded ${file.name}`, 'success')
-        setReload((n) => n + 1)
-      } else {
-        toast(data.error ?? 'Upload failed', 'error')
+  // Upload each file as its own request — the backend takes one file per POST,
+  // so multiple selected/dropped files fan out into N uploads.
+  const uploadFiles = async (files: File[]) => {
+    if (!files.length) return
+    let ok = 0
+    for (const file of files) {
+      const form = new FormData()
+      form.append('file', file)
+      try {
+        const res = await fetch(`${API_BASE}/files/upload?path=${encodeURIComponent(path)}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+          body: form,
+        })
+        if (res.status === 401) { logout(); return }
+        if (res.status === 404) { toast('This server build doesn’t support the file API', 'error'); return }
+        const data: APIResponse = await res.json()
+        if (data.success) ok += 1
+        else toast(data.error ?? `Couldn’t upload ${file.name}`, 'error')
+      } catch {
+        toast(`Couldn’t upload ${file.name}`, 'error')
       }
-    } catch {
-      toast('Upload failed', 'error')
     }
+    if (ok > 0) {
+      toast(files.length === 1 ? `Uploaded ${files[0].name}` : `Uploaded ${ok} of ${files.length} files`, 'success')
+      setReload((n) => n + 1)
+    }
+  }
+
+  // Drag-and-drop upload. A depth counter keeps the overlay from flickering as
+  // dragenter/leave fire across nested children.
+  const hasFiles = (e: React.DragEvent) => !!e.dataTransfer?.types?.includes('Files')
+  const onDragEnter = (e: React.DragEvent) => {
+    if (unsupported || !hasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragging(true)
+  }
+  const onDragOver = (e: React.DragEvent) => {
+    if (!unsupported && hasFiles(e)) e.preventDefault() // required for the drop to fire
+  }
+  const onDragLeave = (e: React.DragEvent) => {
+    if (!hasFiles(e)) return
+    dragDepth.current -= 1
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0
+      setDragging(false)
+    }
+  }
+  const onDrop = (e: React.DragEvent) => {
+    if (unsupported || !hasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragging(false)
+    const dropped = e.dataTransfer?.files
+    if (dropped && dropped.length) uploadFiles(Array.from(dropped))
   }
 
   const crumbs = path ? path.split('/') : []
@@ -245,7 +282,19 @@ function Files() {
   }
 
   return (
-    <div className="files-page">
+    <div
+      className={`files-page ${dragging ? 'is-dragging' : ''}`}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {dragging && (
+        <div className="files-dropzone" aria-hidden="true">
+          <UploadCloud size={34} />
+          <p>Drop files to upload{path ? ` to ${path}` : ''}</p>
+        </div>
+      )}
       <div className="files-bar">
         <nav className="files-crumbs" aria-label="Path">
           <button className="crumb" onClick={() => setPath('')}>server</button>
@@ -272,10 +321,11 @@ function Files() {
           <input
             ref={uploadRef}
             type="file"
+            multiple
             hidden
             onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) upload(f)
+              const fs = e.target.files
+              if (fs && fs.length) uploadFiles(Array.from(fs))
               e.target.value = ''
             }}
           />

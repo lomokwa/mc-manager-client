@@ -1,4 +1,5 @@
 .files-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -6,6 +7,43 @@
   overflow: hidden;
   color: var(--text);
   animation: page-enter 0.4s var(--ease) both;
+}
+
+/* Drag-and-drop upload overlay. pointer-events:none so the drop lands on the
+   page below it; the depth counter in JS prevents flicker across children. */
+.files-dropzone {
+  position: absolute;
+  inset: 0.75rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  text-align: center;
+  color: var(--brand);
+  background: rgba(14, 20, 36, 0.86);
+  border: 2px dashed var(--brand);
+  border-radius: 14px;
+  pointer-events: none;
+  animation: files-drop-in 0.14s var(--ease) both;
+}
+.files-dropzone p {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.files-page.is-dragging .files-list,
+.files-page.is-dragging .files-empty {
+  opacity: 0.35;
+}
+@keyframes files-drop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .files-dropzone { animation: none; }
 }
 
 /* Shown when the server build doesn't ship the file API (404). */
