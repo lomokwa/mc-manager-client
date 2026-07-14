@@ -283,6 +283,19 @@
   background: rgba(233, 69, 96, 0.24);
 }
 
+/* Warn button (used in the invalid-JSON save dialog — a heads-up, not a
+   destructive action, so it reads amber rather than danger red). */
+.fbtn-warn {
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.42);
+  color: #f5cf7e;
+}
+
+.fbtn-warn:hover:not(:disabled) {
+  border-color: var(--warn);
+  background: rgba(251, 191, 36, 0.24);
+}
+
 /* Delete confirmation dialog */
 .files-modal-scrim {
   position: fixed;
@@ -315,6 +328,11 @@
   color: var(--danger);
   background: rgba(233, 69, 96, 0.14);
   margin-bottom: 0.85rem;
+}
+
+.files-modal-icon-warn {
+  color: var(--warn);
+  background: rgba(251, 191, 36, 0.14);
 }
 
 .files-modal-title {

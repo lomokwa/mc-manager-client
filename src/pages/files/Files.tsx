@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
 import { API_BASE, authHeaders, apiFetch } from '../../lib/api'
 import { formatBytes } from '../../lib/format'
-import { languageFor, checkJson } from '../../lib/jsonHighlight'
+import { languageFor, checkJson, type JsonCheck } from '../../lib/jsonHighlight'
 import CodeEditor from '../../components/editor/CodeEditor'
 import './Files.css'
 
@@ -48,6 +48,11 @@ function Files() {
   const [pendingDelete, setPendingDelete] = useState<FileEntry | null>(null)
   const [deleting, setDeleting] = useState(false)
   const cancelDeleteRef = useRef<HTMLButtonElement>(null)
+  // A failed JSON check the user is being asked to save anyway (some mod
+  // configs use JSON5-ish extensions — comments, trailing commas — that are
+  // "invalid" to JSON.parse but perfectly valid to the mod reading them).
+  const [pendingInvalidSave, setPendingInvalidSave] = useState<JsonCheck | null>(null)
+  const cancelInvalidSaveRef = useRef<HTMLButtonElement>(null)
 
   const headers = authHeaders(token)
 
@@ -61,6 +66,16 @@ function Files() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [pendingDelete, deleting])
+
+  useEffect(() => {
+    if (!pendingInvalidSave) return
+    cancelInvalidSaveRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingInvalidSave(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [pendingInvalidSave])
 
   useEffect(() => {
     let cancelled = false
@@ -120,16 +135,10 @@ function Files() {
     [path, token],
   )
 
-  const saveFile = async () => {
+  // The actual PUT — always runs, whether the content is valid JSON, isn't
+  // JSON at all, or the user chose to save invalid JSON anyway.
+  const doSave = async () => {
     if (!editing) return
-    // Never upload broken JSON over a working config.
-    if (languageFor(editing.name) === 'json') {
-      const check = checkJson(editing.content)
-      if (!check.ok) {
-        toast(`Won't save invalid JSON${check.line ? ` (line ${check.line})` : ''} — fix it first`, 'error')
-        return
-      }
-    }
     setSaving(true)
     const r = await apiFetch(`/files?path=${encodeURIComponent(editing.path)}`, {
       method: 'PUT',
@@ -149,6 +158,26 @@ function Files() {
       toast(r.message || 'Failed to save', 'error')
     }
     setSaving(false)
+  }
+
+  // Invalid JSON gets a heads-up, not a hard block — some mod configs use
+  // extensions standard JSON doesn't allow (comments, trailing commas) and are
+  // still valid to the mod reading them.
+  const saveFile = () => {
+    if (!editing) return
+    if (languageFor(editing.name) === 'json') {
+      const check = checkJson(editing.content)
+      if (!check.ok) {
+        setPendingInvalidSave(check)
+        return
+      }
+    }
+    doSave()
+  }
+
+  const confirmSaveAnyway = () => {
+    setPendingInvalidSave(null)
+    doSave()
   }
 
   const download = async (entry: FileEntry) => {
@@ -320,6 +349,36 @@ function Files() {
             <span className="fe-meta">{lineCount} lines · {editing.content.length.toLocaleString()} chars</span>
           </div>
         </div>
+
+        {pendingInvalidSave && (
+          <div className="files-modal-scrim" onClick={() => setPendingInvalidSave(null)}>
+            <div
+              className="files-modal"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="files-json-title"
+              aria-describedby="files-json-body"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="files-modal-icon files-modal-icon-warn"><AlertTriangle size={20} /></div>
+              <h3 id="files-json-title" className="files-modal-title">This doesn’t look like valid JSON</h3>
+              <p id="files-json-body" className="files-modal-body">
+                {pendingInvalidSave.error}{pendingInvalidSave.line ? ` (line ${pendingInvalidSave.line})` : ''}.
+                Some mod configs use things standard JSON doesn’t allow — comments, trailing commas — and are
+                still valid to the mod reading them. Save anyway if you’re sure this is correct.
+              </p>
+              <div className="files-modal-actions">
+                <button ref={cancelInvalidSaveRef} className="fbtn fbtn-ghost" onClick={() => setPendingInvalidSave(null)}>
+                  Keep editing
+                </button>
+                <button className="fbtn fbtn-warn" onClick={confirmSaveAnyway}>
+                  <Save size={15} />
+                  Save anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
