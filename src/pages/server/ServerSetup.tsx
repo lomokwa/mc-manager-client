@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Undo2, Save } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Undo2, Save, Info } from 'lucide-react'
 import { useServer, type CreateServerConfig } from '../../context/ServerContext'
 import { defaultProperties, basicPropertyFields, advancedPropertyFields, type PropertyField } from '../../types/properties'
 import './ServerSetup.css'
@@ -186,6 +186,22 @@ function ServerSetup() {
     setProperties((prev) => ({ ...prev, [key]: value }))
   }
 
+  // Property description is a full table column on desktop, but collapses into
+  // a tap-to-open tooltip (via the info icon) on narrow/mobile layouts.
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null)
+  const tooltipContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openTooltip) return
+    const closeOnOutsideClick = (e: MouseEvent) => {
+      if (!tooltipContainerRef.current?.contains(e.target as Node)) {
+        setOpenTooltip(null)
+      }
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [openTooltip])
+
   const renderInput = (field: PropertyField, prefix: string) => {
     if (field.type === 'boolean') {
       return (
@@ -219,6 +235,33 @@ function ServerSetup() {
       />
     )
   }
+
+  const renderPropRow = (field: PropertyField, prefix: string) => (
+    <tr key={field.key}>
+      <td className="prop-name">
+        <span className="prop-name-text">{field.label}</span>
+        <span className="prop-tooltip-container" ref={openTooltip === field.key ? tooltipContainerRef : undefined}>
+          <button
+            type="button"
+            className="prop-info-btn"
+            title={field.description}
+            aria-label={`About ${field.label}`}
+            aria-expanded={openTooltip === field.key}
+            onClick={() => setOpenTooltip((prev) => (prev === field.key ? null : field.key))}
+          >
+            <Info size={13} />
+          </button>
+          {openTooltip === field.key && (
+            <div className="prop-tooltip" role="tooltip">
+              {field.description}
+            </div>
+          )}
+        </span>
+      </td>
+      <td className="prop-value">{renderInput(field, prefix)}</td>
+      <td className="prop-desc">{field.description}</td>
+    </tr>
+  )
 
   if (serverExists) {
     return (
@@ -290,31 +333,21 @@ function ServerSetup() {
           </div>
         )}
 
-        <table className="properties-table">
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Value</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {basicPropertyFields.map((field) => (
-              <tr key={field.key}>
-                <td className="prop-name">{field.label}</td>
-                <td className="prop-value">{renderInput(field, 'prop')}</td>
-                <td className="prop-desc">{field.description}</td>
+        <div className="properties-table-wrapper">
+          <table className="properties-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+                <th>Description</th>
               </tr>
-            ))}
-            {showAdvanced && advancedPropertyFields.map((field) => (
-              <tr key={field.key}>
-                <td className="prop-name">{field.label}</td>
-                <td className="prop-value">{renderInput(field, 'prop')}</td>
-                <td className="prop-desc">{field.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {basicPropertyFields.map((field) => renderPropRow(field, 'prop'))}
+              {showAdvanced && advancedPropertyFields.map((field) => renderPropRow(field, 'prop'))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="properties-actions">
           <button
@@ -447,31 +480,21 @@ function ServerSetup() {
 
           {configureProperties && (
             <>
-              <table className="properties-table">
-                <thead>
-                  <tr>
-                    <th>Property</th>
-                    <th>Value</th>
-                    <th>Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {basicPropertyFields.map((field) => (
-                    <tr key={field.key}>
-                      <td className="prop-name">{field.label}</td>
-                      <td className="prop-value">{renderInput(field, 'setup')}</td>
-                      <td className="prop-desc">{field.description}</td>
+              <div className="properties-table-wrapper">
+                <table className="properties-table">
+                  <thead>
+                    <tr>
+                      <th>Property</th>
+                      <th>Value</th>
+                      <th>Description</th>
                     </tr>
-                  ))}
-                  {showAdvanced && advancedPropertyFields.map((field) => (
-                    <tr key={field.key}>
-                      <td className="prop-name">{field.label}</td>
-                      <td className="prop-value">{renderInput(field, 'setup')}</td>
-                      <td className="prop-desc">{field.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {basicPropertyFields.map((field) => renderPropRow(field, 'setup'))}
+                    {showAdvanced && advancedPropertyFields.map((field) => renderPropRow(field, 'setup'))}
+                  </tbody>
+                </table>
+              </div>
 
               <button
                 type="button"

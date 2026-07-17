@@ -8,3 +8,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+@media (max-width: 768px) {
+  .action-error {
+    max-width: 24ch;
+    font-size: 0.75rem;
+  }
+}
