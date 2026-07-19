@@ -49,7 +49,7 @@ function SeltonMelloTermsOfService() {
         <p>
           Questions about these terms: email{' '}
           <a href="mailto:lomokwa.dev@gmail.com">lomokwa.dev@gmail.com</a>, or reach out to the bot
-          owner directly on Discord.
+          owner directly on Discord @ <b>lomokwa</b>.
         </p>
 
         <div className="legal-crosslink">
