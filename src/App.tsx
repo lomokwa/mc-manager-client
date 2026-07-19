@@ -11,6 +11,8 @@ import Backups from './pages/backups/Backups'
 import Settings from './pages/settings/Settings'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import SeltonMelloPrivacyPolicy from './pages/legal/SeltonMelloPrivacyPolicy'
+import SeltonMelloTermsOfService from './pages/legal/SeltonMelloTermsOfService'
 import { ServerProvider } from './context/ServerContext'
 import { ToastProvider } from './components/toast/ToastContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -28,6 +30,10 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
+      {/* Public, URL-only legal pages for the Selton Mello Discord bot — not linked
+          from any nav/sidebar, and intentionally outside auth/app chrome. */}
+      <Route path="/legal/selton-mello-bot/privacy" element={<SeltonMelloPrivacyPolicy />} />
+      <Route path="/legal/selton-mello-bot/terms" element={<SeltonMelloTermsOfService />} />
       <Route
         path="/*"
         element={
