@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Archive, Plus, RotateCcw, Trash2, Save, Clock } from 'lucide-react'
+import { Archive, Plus, RotateCcw, Trash2, Save, Clock, Download } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useServer } from '../../context/ServerContext'
 import { useToast } from '../../components/toast/ToastContext'
-import { authHeaders, apiFetch } from '../../lib/api'
+import { API_BASE, authHeaders, apiFetch } from '../../lib/api'
 import { formatBytes, formatWhen } from '../../lib/format'
 import './Backups.css'
 
@@ -135,6 +135,30 @@ function Backups() {
     [token],
   )
 
+  const download = async (name: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/backups/download?name=${encodeURIComponent(name)}`, { headers })
+      if (res.status === 401) { logout(); return }
+      if (res.status === 404) {
+        toast('This server build doesn’t support downloading backups yet', 'error')
+        return
+      }
+      if (!res.ok) {
+        toast('Download failed', 'error')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast('Download failed', 'error')
+    }
+  }
+
   const runConfirm = () => {
     if (!confirm) return
     if (confirm.kind === 'restore') doRestore(confirm.name)
@@ -260,6 +284,14 @@ function Backups() {
                 </div>
               ) : (
                 <div className="backup-actions">
+                  <button
+                    className="bbtn bbtn-icon"
+                    onClick={() => download(b.name)}
+                    title="Download this backup"
+                    aria-label="Download"
+                  >
+                    <Download size={15} />
+                  </button>
                   <button
                     className="bbtn bbtn-icon"
                     onClick={() => setConfirm({ kind: 'restore', name: b.name })}
