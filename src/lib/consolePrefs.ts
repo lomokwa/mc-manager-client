@@ -2,6 +2,7 @@
 // persisted in localStorage so each admin keeps the console they prefer.
 
 import type { LineType } from './consoleLines'
+import type { SparkFoldCategory } from './spark'
 
 export type ConsoleView = 'feed' | 'term' | 'raw'
 
@@ -17,6 +18,10 @@ export interface ConsolePrefs {
   show: Record<LineType, boolean>
   /** User patterns (plain text, or /regex/) whose matching lines are folded. */
   hideRules: string[]
+  /** Per-category visibility of spark lines (true = shown), same convention
+   *  as `show` above — off by default so moderators aren't spammed while the
+   *  Performance page samples the server. */
+  sparkShow: Record<SparkFoldCategory, boolean>
 }
 
 const KEY = 'mcm.console.prefs'
@@ -31,6 +36,7 @@ export const DEFAULT_PREFS: ConsolePrefs = {
     warn: true, error: true, cmd: true, system: true,
   },
   hideRules: [],
+  sparkShow: { echo: false, response: false, monitor: false },
 }
 
 export function loadConsolePrefs(): ConsolePrefs {
@@ -43,6 +49,7 @@ export function loadConsolePrefs(): ConsolePrefs {
       ...p,
       show: { ...DEFAULT_PREFS.show, ...(p.show ?? {}) },
       hideRules: Array.isArray(p.hideRules) ? p.hideRules.filter((r) => typeof r === 'string') : [],
+      sparkShow: { ...DEFAULT_PREFS.sparkShow, ...(p.sparkShow ?? {}) },
     }
   } catch {
     return DEFAULT_PREFS
