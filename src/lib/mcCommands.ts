@@ -88,6 +88,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   { name: 'stopsound', usage: 'stopsound <target> [source] [sound]', desc: 'Stop a sound.', args: [{ name: 'target' }] },
   { name: 'particle', usage: 'particle <name> [pos] ...', desc: 'Create particles.' },
   { name: 'locate', usage: 'locate <structure|biome|poi> <id>', desc: 'Locate the nearest structure, biome, or point of interest.', args: [{ name: 'kind', values: ['structure', 'biome', 'poi'] }] },
+  { name: 'spark', usage: 'spark <tps|health|profiler|...>', desc: 'spark profiler & performance tools.', args: [{ name: 'sub', values: ['tps', 'health', 'profiler', 'gc', 'ping', 'heapsummary', 'activity'] }] },
 ]
 
 // Sorted names for fast prefix matching.
@@ -109,7 +110,7 @@ const COMMAND_NAMES = new Set<string>([
   'fillbiome', 'forceload', 'function', 'item', 'jfr', 'loot', 'me', 'perf',
   'place', 'publish', 'random', 'recipe', 'return', 'ride', 'schedule',
   'spectate', 'spreadplayers', 'tag', 'teammsg', 'tm', 'transfer', 'trigger',
-  'w', 'pardon-ip',
+  'w', 'pardon-ip', 'spark',
 ])
 
 /** True when `token` is a known Minecraft command name (case-insensitive). */

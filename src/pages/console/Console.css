@@ -829,3 +829,31 @@
   }
 }
 
+/* spark noise controls: off-by-default visibility for the Performance page's
+   sampling traffic (reuses .cl-chip/.cl-cd — same bright-when-shown language
+   as the event-type filter chips above). */
+.cl-spark {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+.cl-spark-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+.cl-spark-label svg {
+  color: var(--warn);
+}
+.cl-chip-spark {
+  --c: var(--warn);
+}
+.cl-spark-hint {
+  font-size: 0.68rem;
+  color: var(--text-mute);
+}
+

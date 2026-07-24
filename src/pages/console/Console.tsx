@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeOff, ChevronDown } from 'lucide-react'
+import { Search, Trash2, Download, Trophy, Skull, LogIn, LogOut, MapPin, X, EyeOff, ChevronDown, Zap } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/toast/ToastContext'
@@ -11,6 +11,7 @@ import {
   type ConsoleLine, type LineType,
 } from '../../lib/consoleLines'
 import { loadConsolePrefs, saveConsolePrefs, type ConsolePrefs, type ConsoleView } from '../../lib/consolePrefs'
+import { sparkFoldCategory, foldSparkBlocks, type SparkFoldCategory } from '../../lib/spark'
 import { apiFetch, authHeaders } from '../../lib/api'
 import { formatPlaytime } from '../../lib/playtime'
 import { isValidName, teleportToCoordsCommand, broadcastCommands } from '../../lib/playerCommands'
@@ -35,6 +36,13 @@ const VIEWS: { id: ConsoleView; label: string }[] = [
   { id: 'term', label: 'Terminal+' },
   { id: 'raw', label: 'Raw' },
 ]
+
+const SPARK_SHOW_LABELS: Record<SparkFoldCategory, string> = { echo: 'Queries', response: 'Responses', monitor: 'Monitors' }
+const SPARK_SHOW_TITLES: Record<SparkFoldCategory, string> = {
+  echo: 'Show "> spark …" command echoes (off by default)',
+  response: 'Show spark output like TPS/health replies (off by default)',
+  monitor: 'Show periodic tick/GC monitor lines (off by default)',
+}
 
 // Scoreboard objectives behind the stats. No datapack needed: when a query
 // answers "Unknown scoreboard objective 'mcm.*'", the client creates these
@@ -126,15 +134,27 @@ function Console() {
 
   const classified = useMemo(() => logs.map(classifyLine), [logs])
 
-  // A line is "folded" when it's built-in mcm.* query traffic OR it matches one
-  // of the user's hide rules — either way it hides unless the Hidden chip is on.
-  const decorated = useMemo(
-    () => classified.map((l) => ({
-      ...l,
-      hidden: l.quiet || matchesHideRules(contentOf(l.raw), prefs.hideRules),
-    })),
-    [classified, prefs.hideRules],
-  )
+  // A line is "folded" when it's built-in mcm.* query traffic, matches one of
+  // the user's hide rules, or is spark noise the user hasn't chosen to reveal.
+  // spark's health/gc reports print one prefixed trigger line then a single
+  // raw multi-line message with no per-line tag of its own — foldSparkBlocks
+  // tracks "are we still inside that message" across the whole log, since no
+  // single-line anchor can catch every one of its sub-lines.
+  const decorated = useMemo(() => {
+    const blockFolded = foldSparkBlocks(classified.map((l) => ({ content: contentOf(l.raw), time: l.time })))
+    return classified.map((l, i) => {
+      const content = contentOf(l.raw)
+      const sparkCat = sparkFoldCategory(content)
+      return {
+        ...l,
+        hidden:
+          l.quiet ||
+          matchesHideRules(content, prefs.hideRules) ||
+          (blockFolded[i] && !prefs.sparkShow.response) ||
+          (sparkCat !== null && !prefs.sparkShow[sparkCat]),
+      }
+    })
+  }, [classified, prefs.hideRules, prefs.sparkShow])
   const hiddenCount = useMemo(() => decorated.reduce((n, l) => n + (l.hidden ? 1 : 0), 0), [decorated])
 
   const rows = useMemo(() => {
@@ -670,6 +690,24 @@ function Console() {
           />
           <button type="submit" className="cl-rule-add" disabled={!hideDraft.trim()}>Hide</button>
         </form>
+      </div>
+
+      <div className="cl-spark" aria-label="spark console noise">
+        <span className="cl-spark-label"><Zap size={13} /> spark</span>
+        {(['echo', 'response', 'monitor'] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            className="cl-chip cl-chip-spark"
+            aria-pressed={prefs.sparkShow[k]}
+            title={SPARK_SHOW_TITLES[k]}
+            onClick={() => setPrefs((p) => ({ ...p, sparkShow: { ...p.sparkShow, [k]: !p.sparkShow[k] } }))}
+          >
+            <span className="cl-cd" />
+            {SPARK_SHOW_LABELS[k]}
+          </button>
+        ))}
+        <span className="cl-spark-hint">off by default · toggle on to see this traffic here</span>
       </div>
 
       {insight && (
