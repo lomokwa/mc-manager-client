@@ -1,32 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Copy, Check, Plus, X } from 'lucide-react'
+import { usePermissions } from '../../context/PermissionsContext'
+import { Copy, Check, Plus, X, ShieldCheck } from 'lucide-react'
 import { apiFetch, authHeaders } from '../../lib/api'
+import { getAvatarColor } from '../../lib/avatar'
+import RolePanel from '../../components/roles/RolePanel'
 import type { User, Invitation } from '../../types/user'
 import './Users.css'
 
-const AVATAR_COLORS = [
-  '#7c3aed', '#e03e6a', '#2563eb', '#0891b2', '#059669',
-  '#d97706', '#dc2626', '#7c3aed', '#4f46e5', '#0d9488',
-]
-
-function getAvatarColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
 function Users() {
   const { token, logout } = useAuth()
+  const { can } = usePermissions()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [managing, setManaging] = useState<User | null>(null)
 
+  const canManageRoles = can('admin.manage_roles')
   const headers = authHeaders(token)
 
   useEffect(() => {
@@ -112,7 +105,19 @@ function Users() {
       {!loading && users.length > 0 && (
         <div className="users-list">
           {users.map((user) => (
-            <div key={user.id} className="user-card">
+            <div
+              key={user.id}
+              className={`user-card ${canManageRoles ? 'is-clickable' : ''}`}
+              onClick={() => canManageRoles && setManaging(user)}
+              role={canManageRoles ? 'button' : undefined}
+              tabIndex={canManageRoles ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (canManageRoles && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault()
+                  setManaging(user)
+                }
+              }}
+            >
               <div className="user-avatar-placeholder" style={{ background: getAvatarColor(user.username) }}>
                 {user.username.charAt(0).toUpperCase()}
               </div>
@@ -120,9 +125,18 @@ function Users() {
                 <span className="user-name">{user.username}</span>
                 <span className="user-joined">Joined {new Date(user.created_at).toLocaleDateString()}</span>
               </div>
+              {canManageRoles && (
+                <span className="user-manage-hint">
+                  <ShieldCheck size={14} /> Access
+                </span>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {managing && (
+        <RolePanel user={managing} onClose={() => setManaging(null)} onSaved={() => {}} />
       )}
     </div>
   )

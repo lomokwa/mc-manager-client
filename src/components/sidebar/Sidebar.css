@@ -98,7 +98,7 @@
   color: var(--danger);
 }
 
-/* Who's signed in — read from the JWT, sits above Logout. */
+/* Who's signed in — read from the JWT, links to /account, sits above Logout. */
 .sidebar-user {
   margin-top: auto;
   display: flex;
@@ -109,6 +109,12 @@
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--line-soft);
+  text-decoration: none;
+  transition: background-color var(--t), border-color var(--t);
+}
+.sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line-strong);
 }
 .sidebar-user + .sidebar-logout {
   margin-top: 0;
@@ -123,8 +129,7 @@
   place-items: center;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--brand);
-  background: rgba(78, 204, 163, 0.16);
+  color: #fff;
 }
 .sidebar-user-meta {
   display: flex;

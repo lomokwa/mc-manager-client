@@ -67,6 +67,34 @@
   border-radius: 8px;
 }
 
+.user-card.is-clickable {
+  cursor: pointer;
+  transition: background-color var(--t), transform var(--t-fast);
+}
+.user-card.is-clickable:hover,
+.user-card.is-clickable:focus-visible {
+  background: var(--surface-2, #232842);
+}
+.user-card.is-clickable:active {
+  transform: scale(0.99);
+  transition: transform var(--t-press);
+}
+
+.user-manage-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-mute, #6b7280);
+}
+.user-card.is-clickable:hover .user-manage-hint,
+.user-card.is-clickable:focus-visible .user-manage-hint {
+  color: var(--brand, #4ecca3);
+}
+
 .user-avatar-placeholder {
   width: 40px;
   height: 40px;
