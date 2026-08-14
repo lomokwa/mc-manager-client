@@ -1,13 +1,20 @@
 import { NavLink } from 'react-router-dom'
-import { Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
+import { Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, ServerCog, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
+import { useServers } from '../../context/ServersContext'
 import type { Permission } from '../../lib/permissions'
 import { getAvatarColor } from '../../lib/avatar'
 import './Sidebar.css'
 
-const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission[] }[] = [
+// Two independent gates decide what shows here, and they answer different
+// questions. `need` is "may this account do it" (permissions). `serversOnly`
+// is "does this backend even have the feature" — an older deploy has no
+// /api/servers, and advertising a link whose page can only say "not
+// supported" is worse than not showing it.
+const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission[]; serversOnly?: boolean }[] = [
   { to: '/', label: 'Console', icon: Terminal, need: ['console.read'] },
+  { to: '/servers', label: 'Servers', icon: ServerCog, serversOnly: true },
   { to: '/players', label: 'Players', icon: Users, need: ['players.view'] },
   { to: '/performance', label: 'Performance', icon: Activity, need: ['performance.view'] },
   { to: '/users', label: 'Users', icon: UserCog, need: ['admin.manage_users', 'admin.manage_roles'] },
@@ -20,7 +27,12 @@ const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission
 function Sidebar() {
   const { logout, username } = useAuth()
   const { can } = usePermissions()
-  const visibleItems = navItems.filter((item) => !item.need || item.need.some(can))
+  const { supported: serversSupported } = useServers()
+  const visibleItems = navItems.filter(
+    (item) =>
+      (!item.need || item.need.some(can)) &&
+      (!item.serversOnly || serversSupported),
+  )
 
   return (
     <aside className="sidebar">

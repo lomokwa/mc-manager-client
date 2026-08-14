@@ -1,5 +1,8 @@
+import { Link } from 'react-router-dom'
+import { ServerCog } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { usePermissions } from '../../context/PermissionsContext'
+import { useServers } from '../../context/ServersContext'
 import './Navbar.css'
 
 function Navbar() {
@@ -7,10 +10,20 @@ function Navbar() {
   const { can } = usePermissions()
   const canStop = can('server.stop')
   const canStart = can('server.start')
+  const { supported, servers, currentServerId } = useServers()
+  const currentServer = servers.find((s) => s.id === currentServerId)
 
   return (
     <header className="header">
-      <h1>MC Manager</h1>
+      <div className="header-title">
+        <h1>MC Manager</h1>
+        {supported && currentServer && (
+          <Link to="/servers" className="server-chip" title={`Managing ${currentServer.name} — switch server`}>
+            <ServerCog size={13} />
+            {currentServer.name}
+          </Link>
+        )}
+      </div>
       <div className="controls">
         {actionError && (
           <span className="action-error" role="alert" title={actionError}>
