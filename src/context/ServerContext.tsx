@@ -1,9 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
+import { useServers } from './ServersContext'
 import { isChatLine, type ChatLine } from '../lib/chat'
 import { apiFetch, authHeaders } from '../lib/api'
+import { serverPath } from '../lib/servers'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
+
+// WS_URL already carries the console endpoint's own final path segment
+// (…/api/console, env-configurable). Splitting it there and re-deriving the
+// tail through serverPath keeps this in lockstep with the REST namespacing
+// below -- including the id === null case, which must reproduce WS_URL byte
+// for byte so an old-backend deploy sees today's exact URL.
+function namespacedWsUrl(base: string, serverId: string | null): string {
+  const i = base.lastIndexOf('/')
+  if (i === -1) return base
+  return base.slice(0, i) + serverPath(serverId, base.slice(i))
+}
 
 type MessageListener = (data: string) => void
 
@@ -52,6 +65,7 @@ const MAX_CHAT_LINES = 2000
 
 export function ServerProvider({ children }: { children: ReactNode }) {
   const { token, logout } = useAuth()
+  const { currentServerId } = useServers()
   const [running, setRunning] = useState(false)
   const [loading, setLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -80,12 +94,19 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const headers = authHeaders(token)
 
   const refreshStatus = () => {
-    apiFetch<{ running: boolean }>('/status', { headers }).then((r) => {
+    apiFetch<{ running: boolean }>(serverPath(currentServerId, '/status'), { headers }).then((r) => {
       if (r.kind === 'unauthorized') logout()
       else if (r.kind === 'ok') setRunning(r.data.running)
     })
   }
 
+  // `/server` (exists/create/delete) is deliberately left on the flat route,
+  // not namespaced through serverPath. It answers "does this container have
+  // a Minecraft jar/world provisioned yet" -- the legacy first-run setup
+  // flow -- which PLAN-multi-server.md D3's per-server list
+  // ({status,start,stop,console,players,properties,files*,backups*}) doesn't
+  // include. Creating a NEW registry server is a separate, not-yet-built
+  // operation (POST /api/servers) -- out of scope here (see Servers.tsx).
   const refreshServerExists = () => {
     apiFetch<{ exists: boolean; serverType?: string; gameVersion?: string; loaderVersion?: string }>('/server', { headers }).then((r) => {
       if (r.kind === 'unauthorized') { logout(); return }
@@ -107,7 +128,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     if (wsRef.current) return
     // Show "reconnecting" until the handshake actually opens.
     setConsoleConnected(false)
-    const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token ?? '')}`)
+    const ws = new WebSocket(`${namespacedWsUrl(WS_URL, currentServerId)}?token=${encodeURIComponent(token ?? '')}`)
     // Track the socket immediately, not in onopen: if it's only assigned
     // once the handshake finishes, a second connect started in the meantime
     // creates a duplicate socket, and cleanup can't close a socket it never
@@ -150,7 +171,12 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       // The browser fires 'error' then 'close'; let onclose own teardown and
       // the reconnect so the ref isn't nulled early (which reads as deliberate).
     }
-  }, [token])
+    // currentServerId here means switching servers naturally reconnects: this
+    // callback's identity changes, which re-runs the lifecycle effect below,
+    // whose cleanup closes the old socket (nulling wsRef first, so the old
+    // socket's onclose reads it as deliberate and skips the backoff) before
+    // the effect body calls connectWs() again against the new URL.
+  }, [token, currentServerId])
 
   // Manage the WebSocket lifecycle. wsEpoch is bumped by the reconnect timer so
   // a dropped socket re-runs this effect and reconnects.
@@ -189,6 +215,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     return () => { listenersRef.current.delete(listener) }
   }, [])
 
+  // currentServerId in the deps: switching servers re-checks immediately
+  // instead of waiting up to 5s for the next tick, and restarts the interval
+  // so its closure captures the new server (refreshStatus is redefined every
+  // render, so a setInterval from a stale render would otherwise keep
+  // polling whichever server was selected when this effect last ran).
   useEffect(() => {
     refreshStatus()
     refreshServerExists()
@@ -197,12 +228,12 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     // or crashed silently).
     const id = setInterval(refreshStatus, 5000)
     return () => clearInterval(id)
-  }, [])
+  }, [currentServerId])
 
   const handleStart = async () => {
     setLoading(true)
     setActionError(null)
-    const r = await apiFetch('/start', { method: 'POST', headers })
+    const r = await apiFetch(serverPath(currentServerId, '/start'), { method: 'POST', headers })
     if (r.kind === 'ok') setRunning(true)
     else if (r.kind === 'unauthorized') logout()
     else if (r.kind === 'network') setActionError('Could not reach the server')
@@ -213,7 +244,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const handleStop = async () => {
     setLoading(true)
     setActionError(null)
-    const r = await apiFetch('/stop', { method: 'POST', headers })
+    const r = await apiFetch(serverPath(currentServerId, '/stop'), { method: 'POST', headers })
     if (r.kind === 'ok') setRunning(false)
     else if (r.kind === 'unauthorized') logout()
     else if (r.kind === 'network') setActionError('Could not reach the server')
@@ -256,7 +287,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   const updateProperties = async (properties: Record<string, string>) => {
-    const r = await apiFetch('/properties', { method: 'PATCH', headers, body: JSON.stringify({ properties }) })
+    const r = await apiFetch(serverPath(currentServerId, '/properties'), { method: 'PATCH', headers, body: JSON.stringify({ properties }) })
     if (r.kind === 'unauthorized') { logout(); return }
     if (r.kind !== 'ok') {
       throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to update properties')
@@ -264,7 +295,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
 
   const fetchProperties = async (): Promise<Record<string, string>> => {
-    const r = await apiFetch<Record<string, string>>('/properties', { headers })
+    const r = await apiFetch<Record<string, string>>(serverPath(currentServerId, '/properties'), { headers })
     if (r.kind === 'unauthorized') { logout(); return {} }
     if (r.kind !== 'ok') {
       throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to fetch properties')

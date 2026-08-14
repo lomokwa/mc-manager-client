@@ -1,4 +1,9 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api'
+// Optional chaining on `.env` (not just the var) matters: Vite always
+// populates import.meta.env, but tests/servers.test.ts pulls this module in
+// through plain `node --test` (no Vite involved), where import.meta.env is
+// undefined — a bare `.VITE_API_BASE` access would throw before the `??`
+// fallback ever ran.
+export const API_BASE = import.meta.env?.VITE_API_BASE ?? 'http://localhost:8080/api'
 
 /** Auth + common headers for API requests. */
 export function authHeaders(token: string | null): Record<string, string> {

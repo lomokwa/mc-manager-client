@@ -6,6 +6,7 @@ import Console from './pages/console/Console'
 import Players from './pages/players/Players'
 import Performance from './pages/performance/Performance'
 import ServerSetup from './pages/server/ServerSetup'
+import Servers from './pages/servers/Servers'
 import Users from './pages/users/Users'
 import Files from './pages/files/Files'
 import Backups from './pages/backups/Backups'
@@ -16,6 +17,7 @@ import Register from './pages/auth/Register'
 import SeltonMelloPrivacyPolicy from './pages/legal/SeltonMelloPrivacyPolicy'
 import SeltonMelloTermsOfService from './pages/legal/SeltonMelloTermsOfService'
 import { ServerProvider } from './context/ServerContext'
+import { ServersProvider } from './context/ServersContext'
 import { ToastProvider } from './components/toast/ToastContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PermissionsProvider } from './context/PermissionsContext'
@@ -41,15 +43,23 @@ function AppRoutes() {
         path="/*"
         element={
           <ProtectedRoute>
-            <ServerProvider>
-              <ToastProvider>
-                <PermissionsProvider>
+            {/* ServersProvider wraps ServerProvider: the latter reads
+                currentServerId (useServers()) to namespace its status/WS/
+                start/stop/properties URLs, so it needs to sit below this in
+                the tree. PermissionsProvider's position is free (nothing it
+                reads comes from the others), but it must stay above the app
+                shell, since Sidebar and Navbar both call usePermissions. */}
+            <ServersProvider>
+              <ServerProvider>
+                <ToastProvider>
+                  <PermissionsProvider>
                   <div className="app">
                     <Sidebar />
                     <div className="main-content">
                       <Navbar />
                       <Routes>
                         <Route path="/" element={<Console />} />
+                        <Route path="/servers" element={<Servers />} />
                         <Route path="/players" element={<Players />} />
                         <Route path="/performance" element={<Performance />} />
                         <Route path="/users" element={<Users />} />
@@ -61,9 +71,10 @@ function AppRoutes() {
                       </Routes>
                     </div>
                   </div>
-                </PermissionsProvider>
-              </ToastProvider>
-            </ServerProvider>
+                  </PermissionsProvider>
+                </ToastProvider>
+              </ServerProvider>
+            </ServersProvider>
           </ProtectedRoute>
         }
       />
