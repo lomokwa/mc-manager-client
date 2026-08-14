@@ -10,7 +10,7 @@ import './Users.css'
 
 function Users() {
   const { token, logout } = useAuth()
-  const { can } = usePermissions()
+  const { can, supported: permissionsSupported } = usePermissions()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +19,15 @@ function Users() {
   const [copied, setCopied] = useState(false)
   const [managing, setManaging] = useState<User | null>(null)
 
-  const canManageRoles = can('admin.manage_roles')
+  // Two separate questions, and both have to be yes. `can()` answers "is this
+  // account allowed to", but it deliberately answers true for everything when
+  // the backend has no permissions system at all — that fallback exists so we
+  // never hide something the API would still accept. Here that fallback is
+  // wrong on its own: without the backend there is no /api/roles or
+  // /api/permissions/schema either, so offering "Access" would open a panel
+  // with an empty role dropdown and no permission list. Gate on `supported`
+  // too, and the affordance simply isn't there until it can work.
+  const canManageRoles = permissionsSupported && can('admin.manage_roles')
   const headers = authHeaders(token)
 
   useEffect(() => {
