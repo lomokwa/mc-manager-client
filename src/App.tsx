@@ -10,6 +10,7 @@ import Users from './pages/users/Users'
 import Files from './pages/files/Files'
 import Backups from './pages/backups/Backups'
 import Settings from './pages/settings/Settings'
+import Account from './pages/account/Account'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import SeltonMelloPrivacyPolicy from './pages/legal/SeltonMelloPrivacyPolicy'
@@ -17,6 +18,7 @@ import SeltonMelloTermsOfService from './pages/legal/SeltonMelloTermsOfService'
 import { ServerProvider } from './context/ServerContext'
 import { ToastProvider } from './components/toast/ToastContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { PermissionsProvider } from './context/PermissionsContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -41,22 +43,25 @@ function AppRoutes() {
           <ProtectedRoute>
             <ServerProvider>
               <ToastProvider>
-                <div className="app">
-                  <Sidebar />
-                  <div className="main-content">
-                    <Navbar />
-                    <Routes>
-                      <Route path="/" element={<Console />} />
-                      <Route path="/players" element={<Players />} />
-                      <Route path="/performance" element={<Performance />} />
-                      <Route path="/users" element={<Users />} />
-                      <Route path="/server" element={<ServerSetup />} />
-                      <Route path="/files" element={<Files />} />
-                      <Route path="/backups" element={<Backups />} />
-                      <Route path="/settings" element={<Settings />} />
-                    </Routes>
+                <PermissionsProvider>
+                  <div className="app">
+                    <Sidebar />
+                    <div className="main-content">
+                      <Navbar />
+                      <Routes>
+                        <Route path="/" element={<Console />} />
+                        <Route path="/players" element={<Players />} />
+                        <Route path="/performance" element={<Performance />} />
+                        <Route path="/users" element={<Users />} />
+                        <Route path="/server" element={<ServerSetup />} />
+                        <Route path="/files" element={<Files />} />
+                        <Route path="/backups" element={<Backups />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/account" element={<Account />} />
+                      </Routes>
+                    </div>
                   </div>
-                </div>
+                </PermissionsProvider>
               </ToastProvider>
             </ServerProvider>
           </ProtectedRoute>

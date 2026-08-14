@@ -1,8 +1,12 @@
 import { useServer } from '../../context/ServerContext'
+import { usePermissions } from '../../context/PermissionsContext'
 import './Navbar.css'
 
 function Navbar() {
   const { running, loading, actionError, handleStart, handleStop } = useServer()
+  const { can } = usePermissions()
+  const canStop = can('server.stop')
+  const canStart = can('server.start')
 
   return (
     <header className="header">
@@ -16,11 +20,21 @@ function Navbar() {
         <span className={`status-dot ${running ? 'online' : 'offline'}`} />
         <span className="status-text">{running ? 'Running' : 'Stopped'}</span>
         {running ? (
-          <button onClick={handleStop} disabled={loading} className="btn btn-stop">
+          <button
+            onClick={handleStop}
+            disabled={loading || !canStop}
+            className="btn btn-stop"
+            title={canStop ? undefined : "You don't have permission to stop the server"}
+          >
             {loading ? 'Stopping...' : 'Stop Server'}
           </button>
         ) : (
-          <button onClick={handleStart} disabled={loading} className="btn btn-start">
+          <button
+            onClick={handleStart}
+            disabled={loading || !canStart}
+            className="btn btn-start"
+            title={canStart ? undefined : "You don't have permission to start the server"}
+          >
             {loading ? 'Starting...' : 'Start Server'}
           </button>
         )}
