@@ -18,6 +18,10 @@ function Account() {
   const { toast } = useToast()
 
   const [me, setMe] = useState<User | null>(null)
+  // Tracked separately from `me` so a request that finished but returned
+  // nothing (an older backend has no /api/me) reads as "unavailable" rather
+  // than sitting on "Loading…" forever.
+  const [meResolved, setMeResolved] = useState(false)
   const [schema, setSchema] = useState<PermissionZone[] | null>(null)
 
   const [linkStage, setLinkStage] = useState<LinkStage>('loading')
@@ -31,6 +35,7 @@ function Account() {
   useEffect(() => {
     apiFetch<User>('/me', { headers: authHeaders(token) }).then((r) => {
       if (r.kind === 'ok') setMe(r.data)
+      setMeResolved(true)
     })
     fetchPermissionSchema(token).then((r) => {
       if (r.kind === 'ok') setSchema(r.data)
@@ -104,7 +109,11 @@ function Account() {
         <div className="acct-identity-text">
           <span className="acct-name">{username}</span>
           <span className="acct-sub">
-            {me ? `Member since ${new Date(me.created_at).toLocaleDateString()}` : 'Loading…'}
+            {me
+              ? `Member since ${new Date(me.created_at).toLocaleDateString()}`
+              : meResolved
+                ? 'Signed in'
+                : 'Loading…'}
             {role && <span className={`acct-role-badge ${isOwner ? 'is-owner' : ''}`}>{role}</span>}
           </span>
         </div>
