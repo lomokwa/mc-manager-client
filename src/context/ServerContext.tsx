@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useAuth } from './AuthContext'
 import { useServers } from './ServersContext'
 import { isChatLine, type ChatLine } from '../lib/chat'
-import { apiFetch, authHeaders } from '../lib/api'
+import { apiFetch, authHeaders, failureMessage } from '../lib/api'
 import { serverPath } from '../lib/servers'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/api/console'
@@ -237,7 +237,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     if (r.kind === 'ok') setRunning(true)
     else if (r.kind === 'unauthorized') logout()
     else if (r.kind === 'network') setActionError('Could not reach the server')
-    else setActionError(r.kind === 'error' ? r.message : 'Failed to start the server')
+    else setActionError(failureMessage(r, 'Failed to start the server'))
     setLoading(false)
   }
 
@@ -248,7 +248,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     if (r.kind === 'ok') setRunning(false)
     else if (r.kind === 'unauthorized') logout()
     else if (r.kind === 'network') setActionError('Could not reach the server')
-    else setActionError(r.kind === 'error' ? r.message : 'Failed to stop the server')
+    else setActionError(failureMessage(r, 'Failed to stop the server'))
     setLoading(false)
   }
 
@@ -258,7 +258,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const r = await apiFetch('/server', { method: 'POST', headers, body: JSON.stringify(config) })
       if (r.kind === 'unauthorized') { logout(); throw new Error('Session expired') }
       if (r.kind !== 'ok') {
-        throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to create server')
+        throw new Error(failureMessage(r, r.kind === 'network' ? 'Could not reach the server' : 'Failed to create server'))
       }
       setServerExists(true)
       setServerInfo({
@@ -277,7 +277,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       const r = await apiFetch('/server', { method: 'DELETE', headers })
       if (r.kind === 'unauthorized') { logout(); throw new Error('Session expired') }
       if (r.kind !== 'ok') {
-        throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to delete server')
+        throw new Error(failureMessage(r, r.kind === 'network' ? 'Could not reach the server' : 'Failed to delete server'))
       }
       setServerExists(false)
       setServerInfo(null)
@@ -290,7 +290,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     const r = await apiFetch(serverPath(currentServerId, '/properties'), { method: 'PATCH', headers, body: JSON.stringify({ properties }) })
     if (r.kind === 'unauthorized') { logout(); return }
     if (r.kind !== 'ok') {
-      throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to update properties')
+      throw new Error(failureMessage(r, r.kind === 'network' ? 'Could not reach the server' : 'Failed to update properties'))
     }
   }
 
@@ -298,7 +298,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     const r = await apiFetch<Record<string, string>>(serverPath(currentServerId, '/properties'), { headers })
     if (r.kind === 'unauthorized') { logout(); return {} }
     if (r.kind !== 'ok') {
-      throw new Error(r.kind === 'error' ? r.message : r.kind === 'network' ? 'Could not reach the server' : 'Failed to fetch properties')
+      throw new Error(failureMessage(r, r.kind === 'network' ? 'Could not reach the server' : 'Failed to fetch properties'))
     }
     return r.data
   }

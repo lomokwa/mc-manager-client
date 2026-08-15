@@ -3,7 +3,7 @@ import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useServer } from '../../context/ServerContext'
 import { useAuth } from '../../context/AuthContext'
 import PlayerPanel from '../../components/player/PlayerPanel'
-import { apiFetch, authHeaders } from '../../lib/api'
+import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
 import type { Player, WorldInfo } from '../../types/player'
 import './Players.css'
 
@@ -40,7 +40,7 @@ function Players() {
         } else if (r.kind === 'network') {
           setError('Could not connect to server')
         } else {
-          setError(r.kind === 'error' ? r.message : 'Failed to fetch players')
+          setError(failureMessage(r, 'Failed to fetch players'))
         }
       })
       .finally(() => {

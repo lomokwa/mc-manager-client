@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { Copy, Check, Plus, X, ShieldCheck } from 'lucide-react'
-import { apiFetch, authHeaders } from '../../lib/api'
+import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
 import { getAvatarColor } from '../../lib/avatar'
 import RolePanel from '../../components/roles/RolePanel'
 import type { User, Invitation } from '../../types/user'
@@ -55,7 +55,7 @@ function Users() {
     if (r.kind === 'ok') setInviteLink(r.data.link)
     else if (r.kind === 'unauthorized') logout()
     else if (r.kind === 'network') setError('Could not connect to server')
-    else setError(r.kind === 'error' ? r.message : 'Failed to create invitation')
+    else setError(failureMessage(r, 'Failed to create invitation'))
     setCreating(false)
   }
 
