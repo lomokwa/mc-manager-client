@@ -245,11 +245,19 @@
   overflow: hidden;
 }
 
+/* No transition on purpose. The width comes from the server's CONFIGURED Xmx
+   (see Servers.tsx's memPct), which is static config -- it can only change if
+   someone edits it between two refreshes, so the animation almost never ran
+   while still costing a layout-animating property.
+
+   scaleX would be the usual swap, but not here: the bar is 5px tall with
+   border-radius 999px, so the radius resolves to 2.5px and scaling X squashes
+   the pill caps into ellipses. Removing the animation is both cheaper and
+   truer to the data. */
 .server-mem-fill {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--brand-dim), var(--brand));
-  transition: width var(--t);
 }
 
 .server-card-actions {
