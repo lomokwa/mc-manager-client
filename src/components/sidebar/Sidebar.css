@@ -38,12 +38,18 @@
   position: absolute;
   left: 4px;
   top: 50%;
-  height: 0;
+  height: 56%;
   width: 3px;
   border-radius: 999px;
   background: linear-gradient(180deg, #4ecca3, #60a5fa);
-  transform: translateY(-50%);
-  transition: height var(--t);
+  /* The bar keeps its real height and is scaled to nothing instead of being
+     grown from height:0 — a scale composites, a height animation relayouts
+     every frame. That matters here specifically: the console streams log
+     lines into the DOM continuously, so the main thread is often busy right
+     when someone clicks a nav item. scaleY collapses toward the element's own
+     center, which is the same motion translateY(-50%) already centered. */
+  transform: translateY(-50%) scaleY(0);
+  transition: transform var(--t);
 }
 
 .sidebar-item:hover {
@@ -67,7 +73,7 @@
 }
 
 .sidebar-item.active::before {
-  height: 56%;
+  transform: translateY(-50%) scaleY(1);
 }
 
 .sidebar-item.active .sidebar-icon {
@@ -193,14 +199,14 @@
     left: 50%;
     top: 4px;
     height: 3px;
-    width: 0;
-    transform: translateX(-50%);
-    transition: width var(--t);
+    width: 40%;
+    /* Same trade as the desktop bar above, on the other axis. */
+    transform: translateX(-50%) scaleX(0);
+    transition: transform var(--t);
   }
 
   .sidebar-item.active::before {
-    height: 3px;
-    width: 40%;
+    transform: translateX(-50%) scaleX(1);
   }
 
   /* On mobile the logout joins the bottom nav row instead of anchoring. */
