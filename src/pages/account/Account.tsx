@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useToast } from '../../components/toast/ToastContext'
 import { getAvatarColor } from '../../lib/avatar'
-import { apiFetch, authHeaders } from '../../lib/api'
+import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
 import { fetchPermissionSchema, OWNER_ROLE, type PermissionZone } from '../../lib/permissions'
 import { fetchMcLink, startMcLink, verifyMcLink, unlinkMc, type McLink } from '../../lib/mclink'
 import type { User } from '../../types/user'
@@ -60,7 +60,7 @@ function Account() {
       setCodeExpiresAt(r.data.expires_at)
       setLinkStage('code-sent')
     } else {
-      setLinkError(r.kind === 'error' ? r.message : 'Could not reach the server')
+      setLinkError(failureMessage(r, 'Could not reach the server'))
     }
     setLinkBusy(false)
   }
@@ -77,7 +77,7 @@ function Account() {
       setCode('')
       toast('Minecraft account linked', 'success')
     } else {
-      setLinkError(r.kind === 'error' ? r.message : 'Could not reach the server')
+      setLinkError(failureMessage(r, 'Could not reach the server'))
     }
     setLinkBusy(false)
   }
@@ -91,7 +91,7 @@ function Account() {
       setMcUsername('')
       toast('Minecraft account unlinked', 'success')
     } else {
-      toast(r.kind === 'error' ? r.message : 'Could not reach the server', 'error')
+      toast(failureMessage(r, 'Could not reach the server'), 'error')
     }
     setLinkBusy(false)
   }

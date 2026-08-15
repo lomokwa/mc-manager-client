@@ -7,6 +7,8 @@ const STORAGE_KEY = 'mcm.current_server'
 interface ServersContextType {
   /** True once this backend build is confirmed to have the multi-server registry. */
   supported: boolean
+  /** True when the registry exists but this account may not read it (403). */
+  forbidden: boolean
   loading: boolean
   servers: ServerInfo[]
   currentServerId: string | null
@@ -45,6 +47,11 @@ export function ServersProvider({ children }: { children: ReactNode }) {
   // `supported`/`currentServerId` until a real 200 from `/api/servers`
   // confirms the registry actually exists.
   const [supported, setSupported] = useState(false)
+  // Distinct from !supported. Both hide the picker, but only one of them is
+  // the user's problem to fix, and saying the wrong one sends people to debug
+  // the wrong system -- exactly how a role-less service account got reported
+  // as "the Minecraft server is down" while it was running fine.
+  const [forbidden, setForbidden] = useState(false)
   const [loading, setLoading] = useState(true)
   const [servers, setServers] = useState<ServerInfo[]>([])
   const [currentServerId, setCurrentServerId] = useState<string | null>(null)
@@ -62,11 +69,18 @@ export function ServersProvider({ children }: { children: ReactNode }) {
       if (cancelled) return
       if (r.kind === 'ok') {
         setSupported(true)
+        setForbidden(false)
         setServers(r.data)
         const persisted = readPersistedId()
         const resolved =
           persisted && r.data.some((s) => s.id === persisted) ? persisted : (r.data[0]?.id ?? null)
         setCurrentServerId(resolved)
+      } else {
+        // `forbidden` is recorded so the page can say the true reason, but
+        // `supported` deliberately stays false either way: every consumer must
+        // still fall back to the flat legacy routes, and a 403 is no more a
+        // confirmation that the registry exists than a 404 is.
+        setForbidden(r.kind === 'forbidden')
       }
       // unsupported/network/error/unauthorized: leave supported/servers/
       // currentServerId at their safe defaults above -- see the state comment.
@@ -83,7 +97,7 @@ export function ServersProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <ServersContext.Provider value={{ supported, loading, servers, currentServerId, setCurrentServer, refresh }}>
+    <ServersContext.Provider value={{ supported, forbidden, loading, servers, currentServerId, setCurrentServer, refresh }}>
       {children}
     </ServersContext.Provider>
   )

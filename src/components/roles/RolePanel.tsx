@@ -15,6 +15,7 @@ import {
   type RoleInfo,
   type Permission,
 } from '../../lib/permissions'
+import { failureMessage } from '../../lib/api'
 import type { User } from '../../types/user'
 import './RolePanel.css'
 
@@ -152,7 +153,7 @@ function RolePanel({ user, onClose, onSaved }: RolePanelProps) {
     if (selectedRole !== originalRole) {
       const r = await setUserRole(token, user.id, selectedRole)
       if (r.kind !== 'ok') {
-        toast(r.kind === 'error' ? r.message : 'Failed to change role', 'error')
+        toast(failureMessage(r, 'Failed to change role'), 'error')
         setSaving(false)
         return
       }
@@ -167,7 +168,7 @@ function RolePanel({ user, onClose, onSaved }: RolePanelProps) {
     const r2 = await setUserOverrides(token, user.id, overrides)
     setSaving(false)
     if (r2.kind !== 'ok') {
-      toast(r2.kind === 'error' ? r2.message : 'Failed to save permission overrides', 'error')
+      toast(failureMessage(r2, 'Failed to save permission overrides'), 'error')
       return
     }
     toast(`${user.username} is now ${selectedRole}`, 'success')

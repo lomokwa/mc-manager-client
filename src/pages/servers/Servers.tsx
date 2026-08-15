@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Server as ServerIcon, RefreshCw, Play, Square, Users, Clock, MemoryStick, Plus } from 'lucide-react'
+import { Server as ServerIcon, RefreshCw, Play, Square, Users, Clock, MemoryStick, Plus, ShieldOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useServers } from '../../context/ServersContext'
 import { useToast } from '../../components/toast/ToastContext'
-import { apiFetch, authHeaders } from '../../lib/api'
+import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
 import { fetchServerStatus, startServer, stopServer, serverPath, parseMemSpecMb, type ServerInfo } from '../../lib/servers'
 import type { Player } from '../../types/player'
 import './Servers.css'
@@ -22,7 +22,7 @@ interface CardState {
 
 function Servers() {
   const { token } = useAuth()
-  const { supported, loading, servers, currentServerId, setCurrentServer, refresh } = useServers()
+  const { supported, forbidden, loading, servers, currentServerId, setCurrentServer, refresh } = useServers()
   const { toast } = useToast()
   const [cards, setCards] = useState<Record<string, CardState>>({})
   const [acting, setActing] = useState<Record<string, boolean>>({})
@@ -69,7 +69,7 @@ function Servers() {
     } else if (r.kind === 'network') {
       toast('Could not reach the server', 'error')
     } else {
-      toast(r.kind === 'error' ? r.message : `Failed to ${running ? 'stop' : 'start'} ${server.name}`, 'error')
+      toast(failureMessage(r, `Failed to ${running ? 'stop' : 'start'} ${server.name}`), 'error')
     }
   }
 
@@ -99,7 +99,22 @@ function Servers() {
 
       {loading && <p className="servers-loading">Loading…</p>}
 
-      {!loading && !supported && (
+      {/* Two very different reasons this page can be empty, and telling them
+          apart is the whole point: one is fixed by deploying a backend, the
+          other by an admin granting a permission. Collapsing both into a
+          single "unavailable" is what makes people debug the wrong system. */}
+      {!loading && !supported && forbidden && (
+        <div className="servers-empty">
+          <ShieldOff size={22} />
+          <p>Your account doesn’t have permission to view the server list.</p>
+          <p className="servers-empty-sub">
+            Ask an admin to grant you <code>servers.view</code> on the Users page. Nothing is wrong with the server
+            itself — everything you do have access to keeps working.
+          </p>
+        </div>
+      )}
+
+      {!loading && !supported && !forbidden && (
         <div className="servers-empty">
           <ServerIcon size={22} />
           <p>This server build doesn’t include the multi-server registry yet, so this page isn’t available.</p>
