@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, ServerCog, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, ScrollText, Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, ServerCog, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useServers } from '../../context/ServersContext'
@@ -18,6 +18,7 @@ const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission
   { to: '/servers', label: 'Servers', icon: ServerCog, serversOnly: true },
   { to: '/players', label: 'Players', icon: Users, need: ['players.view'] },
   { to: '/performance', label: 'Performance', icon: Activity, need: ['performance.view'] },
+  { to: '/activity', label: 'Activity', icon: ScrollText, need: ['activity.view'] },
   { to: '/users', label: 'Users', icon: UserCog, need: ['admin.manage_users', 'admin.manage_roles'] },
   { to: '/files', label: 'Files', icon: FolderOpen, need: ['files.read'] },
   { to: '/backups', label: 'Backups', icon: Archive, need: ['backups.view'] },
