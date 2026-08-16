@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, ServerCog, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Terminal, Users, UserCog, Activity, FolderOpen, Archive, Server, ServerCog, SlidersHorizontal, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useServers } from '../../context/ServersContext'
@@ -13,6 +13,7 @@ import './Sidebar.css'
 // /api/servers, and advertising a link whose page can only say "not
 // supported" is worse than not showing it.
 const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission[]; serversOnly?: boolean }[] = [
+  { to: '/overview', label: 'Overview', icon: LayoutDashboard, need: ['overview.view'] },
   { to: '/', label: 'Console', icon: Terminal, need: ['console.read'] },
   { to: '/servers', label: 'Servers', icon: ServerCog, serversOnly: true },
   { to: '/players', label: 'Players', icon: Users, need: ['players.view'] },

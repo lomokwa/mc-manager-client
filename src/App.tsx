@@ -3,6 +3,7 @@ import './App.css'
 import Sidebar from './components/sidebar/Sidebar'
 import Navbar from './components/navbar/Navbar'
 import Console from './pages/console/Console'
+import Overview from './pages/overview/Overview'
 import Players from './pages/players/Players'
 import Performance from './pages/performance/Performance'
 import ServerSetup from './pages/server/ServerSetup'
@@ -59,6 +60,7 @@ function AppRoutes() {
                       <Navbar />
                       <Routes>
                         <Route path="/" element={<Console />} />
+                        <Route path="/overview" element={<Overview />} />
                         <Route path="/servers" element={<Servers />} />
                         <Route path="/players" element={<Players />} />
                         <Route path="/performance" element={<Performance />} />
