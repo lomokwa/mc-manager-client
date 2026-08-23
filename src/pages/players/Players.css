@@ -18,7 +18,14 @@
   font-size: 1.25rem;
 }
 
-.btn-refresh {
+.players-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-refresh,
+.btn-edit {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -34,12 +41,14 @@
   transition: border-color 0.16s, color 0.16s, background 0.16s;
 }
 
-.btn-refresh:hover:not(:disabled) {
+.btn-refresh:hover:not(:disabled),
+.btn-edit:hover:not(:disabled) {
   border-color: #4ecca3;
   color: #4ecca3;
 }
 
-.btn-refresh:disabled {
+.btn-refresh:disabled,
+.btn-edit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -84,6 +93,93 @@
   color: #a6aec0;
 }
 
+.players-editbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 640px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid #26365f;
+  border-radius: 10px;
+  background: #1b2646;
+  animation: rise 0.22s var(--ease) both;
+}
+
+.players-editbar.confirming {
+  border-color: var(--danger);
+}
+
+.players-editbar-text {
+  font-size: 0.85rem;
+  color: #cdd3df;
+}
+
+.players-editbar.confirming .players-editbar-text {
+  color: #e9ecf3;
+  font-weight: 500;
+}
+
+.players-editbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-danger,
+.btn-danger-ghost,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.16s, color 0.16s, background 0.16s, opacity 0.16s;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-danger-ghost {
+  background: transparent;
+  border-color: #26365f;
+  color: #ff6b81;
+}
+
+.btn-danger-ghost:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: rgba(233, 69, 96, 0.12);
+}
+
+.btn-danger-ghost:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #a6aec0;
+  font-weight: 500;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: #e9ecf3;
+}
+
 .players-list {
   display: flex;
   flex-direction: column;
@@ -126,6 +222,30 @@
 .player-card.selected {
   border-color: #4ecca3;
   background: #212d52;
+}
+
+.player-card.edit-mode.checked {
+  border-color: var(--danger);
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.player-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid #3a4a78;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.player-checkbox.checked {
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 .player-card.offline {
@@ -256,6 +376,11 @@
 
   .players-list {
     max-width: 100%;
+  }
+
+  .players-editbar {
+    max-width: 100%;
+    flex-wrap: wrap;
   }
 
   .player-card {
