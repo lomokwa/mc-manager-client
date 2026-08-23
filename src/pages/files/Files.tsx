@@ -243,7 +243,7 @@ function Files() {
       try {
         const res = await fetch(`${API_BASE}/files/upload?path=${encodeURIComponent(path)}`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: form,
         })
         if (res.status === 401) { logout(); return }
