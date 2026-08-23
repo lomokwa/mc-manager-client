@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useToast } from '../toast/ToastContext'
 import { getAvatarColor } from '../../lib/avatar'
+import { avatarSrc } from '../../lib/profile'
 import {
   fetchPermissionSchema,
   fetchRoles,
@@ -182,11 +183,15 @@ function RolePanel({ user, onClose, onSaved }: RolePanelProps) {
       <div className="rp-scrim" onClick={requestClose} />
       <aside className="rp-panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={`Manage ${user.username}'s access`}>
         <header className="rp-header">
-          <span className="rp-avatar" style={{ background: getAvatarColor(user.username) }}>
-            {user.username.charAt(0).toUpperCase()}
-          </span>
+          {avatarSrc(user.avatar_url) ? (
+            <img className="rp-avatar rp-avatar-img" src={avatarSrc(user.avatar_url)!} alt="" />
+          ) : (
+            <span className="rp-avatar" style={{ background: getAvatarColor(user.username) }}>
+              {(user.display_name || user.username).charAt(0).toUpperCase()}
+            </span>
+          )}
           <div className="rp-headtext">
-            <div className="rp-name">{user.username}</div>
+            <div className="rp-name">{user.display_name || user.username}</div>
             <div className="rp-sub">Joined {new Date(user.created_at).toLocaleDateString()}</div>
           </div>
           <button className="rp-close" onClick={requestClose} aria-label="Close">

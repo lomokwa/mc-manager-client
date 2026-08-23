@@ -81,6 +81,10 @@
   color: #fff;
 }
 
+.rp-avatar-img {
+  object-fit: cover;
+}
+
 .rp-headtext {
   min-width: 0;
   flex: 1;

@@ -4,6 +4,7 @@ import { usePermissions } from '../../context/PermissionsContext'
 import { Copy, Check, Plus, X, ShieldCheck } from 'lucide-react'
 import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
 import { getAvatarColor } from '../../lib/avatar'
+import { avatarSrc } from '../../lib/profile'
 import RolePanel from '../../components/roles/RolePanel'
 import type { User, Invitation } from '../../types/user'
 import './Users.css'
@@ -126,11 +127,15 @@ function Users() {
                 }
               }}
             >
-              <div className="user-avatar-placeholder" style={{ background: getAvatarColor(user.username) }}>
-                {user.username.charAt(0).toUpperCase()}
-              </div>
+              {avatarSrc(user.avatar_url) ? (
+                <img className="user-avatar-placeholder user-avatar-img" src={avatarSrc(user.avatar_url)!} alt="" />
+              ) : (
+                <div className="user-avatar-placeholder" style={{ background: getAvatarColor(user.username) }}>
+                  {(user.display_name || user.username).charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="user-info">
-                <span className="user-name">{user.username}</span>
+                <span className="user-name">{user.display_name || user.username}</span>
                 <span className="user-joined">Joined {new Date(user.created_at).toLocaleDateString()}</span>
               </div>
               {canManageRoles && (
