@@ -109,6 +109,10 @@
   flex-shrink: 0;
 }
 
+.user-avatar-img {
+  object-fit: cover;
+}
+
 .user-info {
   display: flex;
   flex-direction: column;

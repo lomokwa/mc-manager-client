@@ -5,6 +5,12 @@
 // fallback ever ran.
 export const API_BASE = import.meta.env?.VITE_API_BASE ?? 'http://localhost:8080/api'
 
+// Avatars are served from the API's origin, not under /api (a browser <img>
+// tag can't attach an Authorization header, so they're a plain static route
+// instead of going through apiFetch). Stripping exactly one trailing "/api"
+// keeps this correct for a custom VITE_API_BASE too.
+export const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
+
 /** Auth + common headers for API requests. */
 export function authHeaders(token: string | null): Record<string, string> {
   return {

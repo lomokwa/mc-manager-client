@@ -5,6 +5,7 @@ import { usePermissions } from '../../context/PermissionsContext'
 import { useServers } from '../../context/ServersContext'
 import type { Permission } from '../../lib/permissions'
 import { getAvatarColor } from '../../lib/avatar'
+import { avatarSrc } from '../../lib/profile'
 import './Sidebar.css'
 
 // Two independent gates decide what shows here, and they answer different
@@ -27,7 +28,7 @@ const navItems: { to: string; label: string; icon: LucideIcon; need?: Permission
 ]
 
 function Sidebar() {
-  const { logout, username } = useAuth()
+  const { logout, username, me } = useAuth()
   const { can } = usePermissions()
   const { supported: serversSupported } = useServers()
   const visibleItems = navItems.filter(
@@ -35,6 +36,9 @@ function Sidebar() {
       (!item.need || item.need.some(can)) &&
       (!item.serversOnly || serversSupported),
   )
+
+  const displayName = me?.display_name || username
+  const avatar = avatarSrc(me?.avatar_url)
 
   return (
     <aside className="sidebar">
@@ -52,17 +56,21 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      {username && (
-        <NavLink to="/account" className="sidebar-user" title={`Signed in as ${username} — view your account`}>
-          <span
-            className="sidebar-user-avatar"
-            aria-hidden="true"
-            style={{ background: getAvatarColor(username) }}
-          >
-            {username.charAt(0).toUpperCase()}
-          </span>
+      {username && displayName && (
+        <NavLink to="/account" className="sidebar-user" title={`Signed in as ${displayName} — view your account`}>
+          {avatar ? (
+            <img className="sidebar-user-avatar sidebar-user-avatar-img" src={avatar} alt="" aria-hidden="true" />
+          ) : (
+            <span
+              className="sidebar-user-avatar"
+              aria-hidden="true"
+              style={{ background: getAvatarColor(username) }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          )}
           <div className="sidebar-user-meta">
-            <span className="sidebar-user-name">{username}</span>
+            <span className="sidebar-user-name">{displayName}</span>
             <span className="sidebar-user-sub">Signed in</span>
           </div>
         </NavLink>

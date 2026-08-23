@@ -137,6 +137,9 @@
   font-weight: 600;
   color: #fff;
 }
+.sidebar-user-avatar-img {
+  object-fit: cover;
+}
 .sidebar-user-meta {
   display: flex;
   flex-direction: column;

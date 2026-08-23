@@ -1,28 +1,48 @@
-import { useEffect, useState } from 'react'
-import { Gamepad2, Link2, Unlink, ShieldCheck, ShieldOff, Loader2, Crown } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Gamepad2, Link2, Unlink, ShieldCheck, ShieldOff, Loader2, Crown, Camera, Trash2, UserRound, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useToast } from '../../components/toast/ToastContext'
 import { getAvatarColor } from '../../lib/avatar'
-import { apiFetch, authHeaders, failureMessage } from '../../lib/api'
+import { failureMessage } from '../../lib/api'
 import { fetchPermissionSchema, OWNER_ROLE, type PermissionZone } from '../../lib/permissions'
 import { fetchMcLink, startMcLink, verifyMcLink, unlinkMc, type McLink } from '../../lib/mclink'
-import type { User } from '../../types/user'
+import { avatarSrc, updateDisplayName, uploadAvatar, removeAvatar, AVATAR_ACCEPT } from '../../lib/profile'
+import AvatarCropper from '../../components/avatarCropper/AvatarCropper'
 import './Account.css'
+
+// A sanity cap on the SOURCE file the cropper is asked to decode -- distinct
+// from services.AvatarMaxBytes on the backend, which bounds the cropped
+// OUTPUT instead (a 512x512 PNG export is always small regardless of how
+// large the original photo was). This just keeps a phone camera's 10-20MB
+// photo from being rejected before it ever gets a chance to be cropped down,
+// while still refusing to decode something absurd.
+const MAX_SOURCE_BYTES = 25 * 1024 * 1024
 
 type LinkStage = 'loading' | 'unlinked' | 'code-sent' | 'linked'
 
 function Account() {
-  const { token, username } = useAuth()
+  const { token, username, me, meResolved, refreshMe } = useAuth()
   const { supported, loading: permsLoading, role, can } = usePermissions()
   const { toast } = useToast()
 
-  const [me, setMe] = useState<User | null>(null)
-  // Tracked separately from `me` so a request that finished but returned
-  // nothing (an older backend has no /api/me) reads as "unavailable" rather
-  // than sitting on "Loading…" forever.
-  const [meResolved, setMeResolved] = useState(false)
   const [schema, setSchema] = useState<PermissionZone[] | null>(null)
+
+  const [displayNameInput, setDisplayNameInput] = useState('')
+  // Tracks which `me` the input was last synced from, so a change to `me`
+  // (initial load, or this page's own save/upload via refreshMe()) can reset
+  // the input during render -- React's documented alternative to an effect
+  // for "adjust state when a prop/value changes" -- without an extra commit.
+  const [syncedMe, setSyncedMe] = useState<typeof me>(null)
+  if (me !== syncedMe) {
+    setSyncedMe(me)
+    setDisplayNameInput(me?.display_name ?? '')
+  }
+  const [savingName, setSavingName] = useState(false)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [linkStage, setLinkStage] = useState<LinkStage>('loading')
   const [link, setLink] = useState<McLink | null>(null)
@@ -33,10 +53,6 @@ function Account() {
   const [linkError, setLinkError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch<User>('/me', { headers: authHeaders(token) }).then((r) => {
-      if (r.kind === 'ok') setMe(r.data)
-      setMeResolved(true)
-    })
     fetchPermissionSchema(token).then((r) => {
       if (r.kind === 'ok') setSchema(r.data)
     })
@@ -49,6 +65,58 @@ function Account() {
       }
     })
   }, [token])
+
+  const saveDisplayName = async () => {
+    setSavingName(true)
+    const r = await updateDisplayName(token, displayNameInput.trim())
+    if (r.kind === 'ok') {
+      refreshMe()
+      toast('Display name updated', 'success')
+    } else {
+      toast(failureMessage(r, 'Failed to update display name'), 'error')
+    }
+    setSavingName(false)
+  }
+
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // let picking the same file again re-trigger onChange
+    if (!file) return
+
+    setAvatarError(null)
+    if (file.size > MAX_SOURCE_BYTES) {
+      setAvatarError(`Image too large: max ${MAX_SOURCE_BYTES / (1024 * 1024)}MB`)
+      return
+    }
+
+    setCropFile(file) // opens the crop dialog; the actual upload happens in handleCropped
+  }
+
+  const handleCropped = async (cropped: File) => {
+    setCropFile(null)
+    setAvatarBusy(true)
+    const r = await uploadAvatar(token, cropped)
+    if (r.kind === 'ok') {
+      refreshMe()
+      toast('Profile picture updated', 'success')
+    } else {
+      setAvatarError(failureMessage(r, 'Failed to upload image'))
+    }
+    setAvatarBusy(false)
+  }
+
+  const handleRemoveAvatar = async () => {
+    setAvatarBusy(true)
+    setAvatarError(null)
+    const r = await removeAvatar(token)
+    if (r.kind === 'ok') {
+      refreshMe()
+      toast('Profile picture removed', 'success')
+    } else {
+      setAvatarError(failureMessage(r, 'Failed to remove image'))
+    }
+    setAvatarBusy(false)
+  }
 
   const sendCode = async () => {
     const name = mcUsername.trim()
@@ -103,11 +171,15 @@ function Account() {
       <h2>My Account</h2>
 
       <section className="acct-identity">
-        <span className="acct-avatar" style={{ background: getAvatarColor(username ?? '?') }}>
-          {(username ?? '?').charAt(0).toUpperCase()}
-        </span>
+        {avatarSrc(me?.avatar_url) ? (
+          <img className="acct-avatar acct-avatar-img" src={avatarSrc(me?.avatar_url)!} alt="" />
+        ) : (
+          <span className="acct-avatar" style={{ background: getAvatarColor(username ?? '?') }}>
+            {(me?.display_name || username || '?').charAt(0).toUpperCase()}
+          </span>
+        )}
         <div className="acct-identity-text">
-          <span className="acct-name">{username}</span>
+          <span className="acct-name">{me?.display_name || username}</span>
           <span className="acct-sub">
             {me
               ? `Member since ${new Date(me.created_at).toLocaleDateString()}`
@@ -116,6 +188,72 @@ function Account() {
                 : 'Loading…'}
             {role && <span className={`acct-role-badge ${isOwner ? 'is-owner' : ''}`}>{role}</span>}
           </span>
+        </div>
+      </section>
+
+      <section className="acct-card">
+        <h3 className="acct-card-title">
+          <UserRound size={16} /> Profile
+        </h3>
+
+        <div className="acct-profile-edit">
+          <div className="acct-avatar-edit">
+            {avatarSrc(me?.avatar_url) ? (
+              <img className="acct-avatar acct-avatar-img" src={avatarSrc(me?.avatar_url)!} alt="" />
+            ) : (
+              <span className="acct-avatar" style={{ background: getAvatarColor(username ?? '?') }}>
+                {(me?.display_name || username || '?').charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="acct-avatar-actions">
+              <button
+                className="acct-btn acct-btn-ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarBusy}
+              >
+                {avatarBusy ? <Loader2 size={15} className="acct-spin" /> : <Camera size={15} />}
+                {me?.avatar_url ? 'Change photo' : 'Upload photo'}
+              </button>
+              {me?.avatar_url && (
+                <button className="acct-btn acct-btn-ghost" onClick={handleRemoveAvatar} disabled={avatarBusy}>
+                  <Trash2 size={15} /> Remove
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={AVATAR_ACCEPT}
+                hidden
+                onChange={handleAvatarFile}
+              />
+            </div>
+          </div>
+          {avatarError && <p className="acct-error">{avatarError}</p>}
+
+          <div className="acct-field">
+            <label className="acct-label" htmlFor="acct-display-name">Display name</label>
+            <div className="acct-inline-form">
+              <input
+                id="acct-display-name"
+                className="acct-input"
+                placeholder={username ?? ''}
+                value={displayNameInput}
+                maxLength={32}
+                disabled={savingName}
+                onChange={(e) => setDisplayNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveDisplayName()}
+              />
+              <button
+                className="acct-btn acct-btn-primary"
+                onClick={saveDisplayName}
+                disabled={savingName || displayNameInput === (me?.display_name ?? '')}
+              >
+                {savingName ? <Loader2 size={15} className="acct-spin" /> : <Check size={15} />}
+                Save
+              </button>
+            </div>
+            <p className="acct-hint">Shown instead of your username around the app. Leave blank to use your username.</p>
+          </div>
         </div>
       </section>
 
@@ -245,6 +383,10 @@ function Account() {
           </div>
         )}
       </section>
+
+      {cropFile && (
+        <AvatarCropper file={cropFile} onCancel={() => setCropFile(null)} onCropped={handleCropped} />
+      )}
     </div>
   )
 }

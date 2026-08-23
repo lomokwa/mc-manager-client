@@ -30,6 +30,10 @@
   color: #fff;
 }
 
+.acct-avatar-img {
+  object-fit: cover;
+}
+
 .acct-identity-text {
   display: flex;
   flex-direction: column;
@@ -205,6 +209,38 @@
   margin: 0.6rem 0 0;
   font-size: 0.8rem;
   color: var(--danger);
+}
+
+.acct-profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.acct-avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.acct-avatar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.acct-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
 }
 
 .acct-linked {
