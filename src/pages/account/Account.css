@@ -122,6 +122,7 @@
   font-family: inherit;
   font-size: 0.85rem;
   transition: border-color var(--t), box-shadow var(--t);
+  margin-bottom: 20px;
 }
 
 .acct-input::placeholder {

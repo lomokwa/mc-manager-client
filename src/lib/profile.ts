@@ -28,6 +28,32 @@ export function updateDisplayName(token: string | null, displayName: string): Pr
   })
 }
 
+export function updateEmail(token: string | null, email: string): Promise<ApiResult<User>> {
+  return apiFetch<User>('/me/email', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function changePassword(
+  token: string | null,
+  currentPassword: string,
+  newPassword: string,
+): Promise<ApiResult<null>> {
+  return apiFetch<null>('/me/password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+}
+
 export function uploadAvatar(token: string | null, file: File): Promise<ApiResult<User>> {
   const body = new FormData()
   body.append('avatar', file)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Gamepad2, Link2, Unlink, ShieldCheck, ShieldOff, Loader2, Crown, Camera, Trash2, UserRound, Check } from 'lucide-react'
+import { Gamepad2, Link2, Unlink, ShieldCheck, ShieldOff, Loader2, Crown, Camera, Trash2, UserRound, Check, KeyRound } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../context/PermissionsContext'
 import { useToast } from '../../components/toast/ToastContext'
@@ -7,7 +7,7 @@ import { getAvatarColor } from '../../lib/avatar'
 import { failureMessage } from '../../lib/api'
 import { fetchPermissionSchema, OWNER_ROLE, type PermissionZone } from '../../lib/permissions'
 import { fetchMcLink, startMcLink, verifyMcLink, unlinkMc, type McLink } from '../../lib/mclink'
-import { avatarSrc, updateDisplayName, uploadAvatar, removeAvatar, AVATAR_ACCEPT } from '../../lib/profile'
+import { avatarSrc, updateDisplayName, updateEmail, changePassword, uploadAvatar, removeAvatar, AVATAR_ACCEPT } from '../../lib/profile'
 import AvatarCropper from '../../components/avatarCropper/AvatarCropper'
 import './Account.css'
 
@@ -33,16 +33,26 @@ function Account() {
   // (initial load, or this page's own save/upload via refreshMe()) can reset
   // the input during render -- React's documented alternative to an effect
   // for "adjust state when a prop/value changes" -- without an extra commit.
+  const [emailInput, setEmailInput] = useState('')
   const [syncedMe, setSyncedMe] = useState<typeof me>(null)
   if (me !== syncedMe) {
     setSyncedMe(me)
     setDisplayNameInput(me?.display_name ?? '')
+    setEmailInput(me?.email ?? '')
   }
   const [savingName, setSavingName] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordBusy, setPasswordBusy] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const [linkStage, setLinkStage] = useState<LinkStage>('loading')
   const [link, setLink] = useState<McLink | null>(null)
@@ -76,6 +86,44 @@ function Account() {
       toast(failureMessage(r, 'Failed to update display name'), 'error')
     }
     setSavingName(false)
+  }
+
+  const saveEmail = async () => {
+    setEmailError(null)
+    setSavingEmail(true)
+    const r = await updateEmail(token, emailInput.trim())
+    if (r.kind === 'ok') {
+      refreshMe()
+      toast('Email updated', 'success')
+    } else {
+      setEmailError(failureMessage(r, 'Failed to update email'))
+    }
+    setSavingEmail(false)
+  }
+
+  const submitPasswordChange = async () => {
+    setPasswordError(null)
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match')
+      return
+    }
+
+    setPasswordBusy(true)
+    const r = await changePassword(token, currentPassword, newPassword)
+    if (r.kind === 'ok') {
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      toast('Password changed', 'success')
+    } else {
+      setPasswordError(failureMessage(r, 'Failed to change password'))
+    }
+    setPasswordBusy(false)
   }
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,7 +302,86 @@ function Account() {
             </div>
             <p className="acct-hint">Shown instead of your username around the app. Leave blank to use your username.</p>
           </div>
+
+          <div className="acct-field">
+            <label className="acct-label" htmlFor="acct-email">Email</label>
+            <div className="acct-inline-form">
+              <input
+                id="acct-email"
+                className="acct-input"
+                type="email"
+                placeholder="you@example.com"
+                value={emailInput}
+                disabled={savingEmail}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveEmail()}
+              />
+              <button
+                className="acct-btn acct-btn-primary"
+                onClick={saveEmail}
+                disabled={savingEmail || emailInput.trim() === (me?.email ?? '')}
+              >
+                {savingEmail ? <Loader2 size={15} className="acct-spin" /> : <Check size={15} />}
+                Save
+              </button>
+            </div>
+            {emailError && <p className="acct-error">{emailError}</p>}
+            <p className="acct-hint">Not shown to other users. Leave blank to remove it.</p>
+          </div>
         </div>
+      </section>
+
+      <section className="acct-card">
+        <h3 className="acct-card-title">
+          <KeyRound size={16} /> Security
+        </h3>
+
+        <div className="acct-field">
+          <label className="acct-label" htmlFor="acct-current-password">Current password</label>
+          <input
+            id="acct-current-password"
+            className="acct-input"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            disabled={passwordBusy}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+        </div>
+        <div className="acct-field">
+          <label className="acct-label" htmlFor="acct-new-password">New password</label>
+          <input
+            id="acct-new-password"
+            className="acct-input"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            disabled={passwordBusy}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
+        <div className="acct-field">
+          <label className="acct-label" htmlFor="acct-confirm-password">Confirm new password</label>
+          <input
+            id="acct-confirm-password"
+            className="acct-input"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            disabled={passwordBusy}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submitPasswordChange()}
+          />
+        </div>
+        <button
+          className="acct-btn acct-btn-primary"
+          onClick={submitPasswordChange}
+          disabled={passwordBusy || !currentPassword || !newPassword || !confirmPassword}
+        >
+          {passwordBusy ? <Loader2 size={15} className="acct-spin" /> : <KeyRound size={15} />}
+          Change password
+        </button>
+        {passwordError && <p className="acct-error">{passwordError}</p>}
       </section>
 
       <section className="acct-card">
