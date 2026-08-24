@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { avatarSrc, updateDisplayName, uploadAvatar, removeAvatar, AVATAR_MAX_BYTES } from '../src/lib/profile.ts'
+import { avatarSrc, updateDisplayName, updateEmail, changePassword, uploadAvatar, removeAvatar, AVATAR_MAX_BYTES } from '../src/lib/profile.ts'
 
 const realFetch = globalThis.fetch
 
@@ -41,6 +41,46 @@ test('updateDisplayName: PATCHes /me with the trimmed value as JSON', async () =
   assert.equal(seenInit?.body, JSON.stringify({ display_name: 'Bob' }))
   assert.equal(r.kind, 'ok')
   assert.equal(r.kind === 'ok' && r.data.display_name, 'Bob')
+})
+
+test('updateEmail: PATCHes /me/email with the trimmed value as JSON', async () => {
+  let seenUrl = ''
+  let seenInit: RequestInit | undefined
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    seenUrl = url
+    seenInit = init
+    return new Response(JSON.stringify({ success: true, data: { id: 1, username: 'bob', email: 'bob@example.com', created_at: '' } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+
+  const r = await updateEmail('tok', 'bob@example.com')
+
+  assert.equal(seenUrl, 'http://localhost:8080/api/me/email')
+  assert.equal(seenInit?.method, 'PATCH')
+  assert.equal((seenInit?.headers as Record<string, string>).Authorization, 'Bearer tok')
+  assert.equal(seenInit?.body, JSON.stringify({ email: 'bob@example.com' }))
+  assert.equal(r.kind, 'ok')
+  assert.equal(r.kind === 'ok' && r.data.email, 'bob@example.com')
+})
+
+test('changePassword: POSTs /me/password with current and new password as JSON', async () => {
+  let seenUrl = ''
+  let seenInit: RequestInit | undefined
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    seenUrl = url
+    seenInit = init
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'content-type': 'application/json' } })
+  }) as typeof fetch
+
+  const r = await changePassword('tok', 'oldpw', 'newpw123')
+
+  assert.equal(seenUrl, 'http://localhost:8080/api/me/password')
+  assert.equal(seenInit?.method, 'POST')
+  assert.equal((seenInit?.headers as Record<string, string>).Authorization, 'Bearer tok')
+  assert.equal(seenInit?.body, JSON.stringify({ current_password: 'oldpw', new_password: 'newpw123' }))
+  assert.equal(r.kind, 'ok')
 })
 
 test('uploadAvatar: POSTs multipart form data without forcing a Content-Type', async () => {
