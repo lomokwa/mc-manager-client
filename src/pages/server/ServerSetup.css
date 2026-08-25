@@ -238,21 +238,6 @@
   overflow: hidden;
 }
 
-.properties-table th:nth-child(1),
-.properties-table td:nth-child(1) {
-  width: 34%;
-}
-
-.properties-table th:nth-child(2),
-.properties-table td:nth-child(2) {
-  width: 20%;
-}
-
-.properties-table th:nth-child(3),
-.properties-table td:nth-child(3) {
-  width: 46%;
-}
-
 .properties-table thead {
   background: #16213e;
   border-bottom: 1px solid #0f3460;
