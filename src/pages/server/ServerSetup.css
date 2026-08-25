@@ -254,6 +254,7 @@
 .properties-table td {
   padding: 0.5rem 1rem;
   border-bottom: 1px solid #0f346040;
+  height: 2.9rem;
 }
 
 .properties-table tbody tr:last-child td {
@@ -507,6 +508,7 @@
     width: 100% !important;
     padding: 0;
     border-bottom: none;
+    height: auto;
   }
 
   .prop-desc {
