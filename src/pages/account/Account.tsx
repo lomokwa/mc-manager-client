@@ -239,6 +239,8 @@ function Account() {
         </div>
       </section>
 
+      <div className="acct-cols">
+      <div className="acct-col">
       <section className="acct-card">
         <h3 className="acct-card-title">
           <UserRound size={16} /> Profile
@@ -383,7 +385,9 @@ function Account() {
         </button>
         {passwordError && <p className="acct-error">{passwordError}</p>}
       </section>
+      </div>
 
+      <div className="acct-col">
       <section className="acct-card">
         <h3 className="acct-card-title">
           <Gamepad2 size={16} /> Minecraft account
@@ -510,6 +514,8 @@ function Account() {
           </div>
         )}
       </section>
+      </div>
+      </div>
 
       {cropFile && (
         <AvatarCropper file={cropFile} onCancel={() => setCropFile(null)} onCropped={handleCropped} />

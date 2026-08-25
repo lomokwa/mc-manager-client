@@ -181,10 +181,10 @@
 }
 
 .players-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 0.5rem;
-  max-width: 640px;
+  align-items: start;
 }
 
 .player-card {
@@ -375,7 +375,7 @@
   }
 
   .players-list {
-    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .players-editbar {
