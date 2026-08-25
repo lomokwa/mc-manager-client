@@ -240,17 +240,17 @@
 
 .properties-table th:nth-child(1),
 .properties-table td:nth-child(1) {
-  width: 26%;
+  width: 34%;
 }
 
 .properties-table th:nth-child(2),
 .properties-table td:nth-child(2) {
-  width: 22%;
+  width: 20%;
 }
 
 .properties-table th:nth-child(3),
 .properties-table td:nth-child(3) {
-  width: 52%;
+  width: 46%;
 }
 
 .properties-table thead {
@@ -280,8 +280,6 @@
 }
 
 .prop-name {
-  white-space: nowrap;
-  overflow: hidden;
   font-weight: 500;
   color: #e0e0e0;
   position: relative;
@@ -291,8 +289,8 @@
 }
 
 .prop-name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
   min-width: 20px;
 }
 
