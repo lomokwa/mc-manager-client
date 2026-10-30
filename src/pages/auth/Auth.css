@@ -147,3 +147,23 @@
   font-size: 0.75rem;
   color: #a0a0b0;
 }
+
+.auth-modal {
+  margin: auto;
+  color: inherit;
+}
+
+.auth-modal::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.auth-modal-message {
+  margin: 0 0 24px;
+  color: #a0a0b0;
+  text-align: center;
+  font-size: 0.9rem;
+  text-wrap: balance;
+}
+
+.auth-modal[data-tone='warning'] h1 { color: #f0b429; }
+.auth-modal[data-tone='error'] h1 { color: #e94560; }

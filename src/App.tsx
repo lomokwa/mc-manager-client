@@ -25,6 +25,8 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { PermissionsProvider } from './context/PermissionsContext'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
+import { MissingEmailAlert } from './components/alerts/MissingEmailAlert'
+import { AlertProvider } from './components/alerts/AlertProvider'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -58,28 +60,31 @@ function AppRoutes() {
             <ServersProvider>
               <ServerProvider>
                 <ToastProvider>
-                  <PermissionsProvider>
-                  <div className="app">
-                    <Sidebar />
-                    <div className="main-content">
-                      <Navbar />
-                      <Routes>
-                        <Route path="/" element={<Console />} />
-                        <Route path="/overview" element={<Overview />} />
-                        <Route path="/activity" element={<Activity />} />
-                        <Route path="/servers" element={<Servers />} />
-                        <Route path="/players" element={<Players />} />
-                        <Route path="/performance" element={<Performance />} />
-                        <Route path="/users" element={<Users />} />
-                        <Route path="/server" element={<ServerSetup />} />
-                        <Route path="/files" element={<Files />} />
-                        <Route path="/backups" element={<Backups />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/account" element={<Account />} />
-                      </Routes>
-                    </div>
-                  </div>
-                  </PermissionsProvider>
+                  <AlertProvider>
+                    <PermissionsProvider>
+                      <MissingEmailAlert />
+                      <div className="app">
+                        <Sidebar />
+                        <div className="main-content">
+                          <Navbar />
+                          <Routes>
+                            <Route path="/" element={<Console />} />
+                            <Route path="/overview" element={<Overview />} />
+                            <Route path="/activity" element={<Activity />} />
+                            <Route path="/servers" element={<Servers />} />
+                            <Route path="/players" element={<Players />} />
+                            <Route path="/performance" element={<Performance />} />
+                            <Route path="/users" element={<Users />} />
+                            <Route path="/server" element={<ServerSetup />} />
+                            <Route path="/files" element={<Files />} />
+                            <Route path="/backups" element={<Backups />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/account" element={<Account />} />
+                          </Routes>
+                        </div>
+                      </div>
+                    </PermissionsProvider>
+                  </AlertProvider>
                 </ToastProvider>
               </ServerProvider>
             </ServersProvider>
