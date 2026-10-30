@@ -59,6 +59,9 @@ function Login() {
           </button>
         </form>
         <div className="auth-link">
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </div>
+        <div className="auth-link">
           Have an invitation? <Link to="/register">Create an account</Link>
         </div>
       </div>

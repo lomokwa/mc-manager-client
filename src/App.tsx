@@ -23,6 +23,8 @@ import { ServersProvider } from './context/ServersContext'
 import { ToastProvider } from './components/toast/ToastContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PermissionsProvider } from './context/PermissionsContext'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -37,6 +39,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />} />
+      <Route path="/reset-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />} />
       {/* Public, URL-only legal pages for the Selton Mello Discord bot — not linked
           from any nav/sidebar, and intentionally outside auth/app chrome. */}
       <Route path="/legal/selton-mello-bot/privacy" element={<SeltonMelloPrivacyPolicy />} />
